@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=320, initial-scale=1.0">
+  <title>DSE Live Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div id="app">
+
+    <header class="header">
+      <h1 class="header-title">DSE Tracker</h1>
+      <div class="header-actions">
+        <button id="darkToggle" class="icon-btn" title="Toggle dark mode">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+          </svg>
+        </button>
+        <button id="refreshBtn" class="icon-btn" title="Refresh all prices">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17.65 6.35A7.96 7.96 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <nav class="tabs">
+      <button class="tab active" data-view="portfolio">Portfolio</button>
+      <button class="tab" data-view="holdings">Holdings <span id="holdingsBadge" class="tab-badge hidden"></span></button>
+      <button class="tab" data-view="watchlist">Watchlist <span id="watchlistBadge" class="tab-badge hidden"></span></button>
+      <button class="tab" data-view="search">Search</button>
+    </nav>
+
+    <!-- ═══ Portfolio View — Summary + Add Form ═══ -->
+    <div id="viewPortfolio" class="view active">
+      <div id="wlSummary" class="wl-summary"></div>
+      <div class="portfolio-spacer"></div>
+      <div class="wl-add-section">
+        <div class="wl-add-title">Add Stock</div>
+        <div class="wl-add-field">
+          <label class="wl-add-label" for="addSymbol">Stock Symbol</label>
+          <input type="text" id="addSymbol" class="input" placeholder="e.g. GP" maxlength="20">
+        </div>
+        <div class="wl-add-field">
+          <label class="wl-add-label" for="addBuyPrice">Buy Price (BDT)</label>
+          <input type="number" id="addBuyPrice" class="input" placeholder="e.g. 300" min="0" step="any">
+        </div>
+        <div class="wl-add-field">
+          <label class="wl-add-label" for="addQty">Quantity</label>
+          <input type="number" id="addQty" class="input" placeholder="e.g. 100" min="1">
+        </div>
+        <button id="addBtn" class="btn-add">+ Add to Portfolio</button>
+      </div>
+    </div>
+
+    <!-- ═══ Holdings View — Full list with sort ═══ -->
+    <div id="viewHoldings" class="view">
+      <div class="holdings-sort">
+        <label>Sort:</label>
+        <select id="holdingsSort">
+          <option value="pnl-asc">P&amp;L (worst first)</option>
+          <option value="pnl-desc">P&amp;L (best first)</option>
+          <option value="pct-asc">% Change (worst first)</option>
+          <option value="pct-desc">% Change (best first)</option>
+          <option value="name-asc">Name (A-Z)</option>
+          <option value="name-desc">Name (Z-A)</option>
+        </select>
+        <span id="holdingsCount" class="holdings-count"></span>
+      </div>
+      <div id="holdingsContainer" class="holdings-container"></div>
+      <div class="holdings-add-section">
+        <button id="holdingsAddBtn" class="btn-add">+ Add New Stock</button>
+      </div>
+    </div>
+
+    <!-- ═══ Watchlist View ═══ -->
+    <div id="viewWatchlist" class="view">
+      <div id="qwContainer" class="watchlist-container"></div>
+      <div class="wl-add-section">
+        <div class="wl-add-title">Track Stock</div>
+        <div class="wl-add-field">
+          <label class="wl-add-label" for="qwSymbol">Stock Symbol</label>
+          <input type="text" id="qwSymbol" class="input" placeholder="e.g. GP" maxlength="20">
+        </div>
+        <div class="wl-add-field">
+          <label class="wl-add-label" for="qwTarget">Target Price (optional)</label>
+          <input type="number" id="qwTarget" class="input" placeholder="e.g. 350" min="0" step="any">
+        </div>
+        <button id="qwAddBtn" class="btn-add">+ Add to Watchlist</button>
+      </div>
+    </div>
+
+    <!-- ═══ Search View ═══ -->
+    <div id="viewSearch" class="view">
+      <div class="search-form">
+        <div class="input-wrapper">
+          <input type="text" id="symbol" class="input" placeholder="Stock (e.g., GP)" maxlength="20" autocomplete="off" spellcheck="false" aria-label="Stock symbol">
+          <div id="autocompleteDropdown" class="autocomplete-dropdown hidden"></div>
+        </div>
+        <input type="number" id="buyPrice" class="input" placeholder="Buy price (BDT)" min="0" step="any" aria-label="Buy price">
+        <input type="number" id="quantity" class="input" placeholder="Quantity" min="1" aria-label="Quantity">
+        <button id="checkBtn" class="check-btn">Check Price</button>
+        <button id="addToWatchlistBtn" class="btn-add-watchlist hidden">+ Add to Portfolio</button>
+      </div>
+      <div id="searchEmpty" class="search-empty">
+        <svg class="search-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="11" cy="11" r="8"/>
+          <path d="M21 21l-4.35-4.35"/>
+        </svg>
+        <div class="search-empty-title">Enter a stock symbol to check live price</div>
+        <div class="search-empty-sub">e.g. GP, BRAC, ISLAMI</div>
+      </div>
+      <div id="loadingContainer" class="loading-container hidden">
+        <div class="spinner"></div>
+        <span class="loading-text">Fetching price...</span>
+      </div>
+      <div id="errorMsg" class="error-msg hidden"></div>
+      <div id="resultCard" class="result-card hidden">
+        <div class="result-header">
+          <span class="result-symbol" id="resultSymbol">GP</span>
+          <span class="result-qty" id="resultQty"></span>
+        </div>
+        <div class="result-body">
+          <div class="result-row">
+            <span class="result-label">LTP</span>
+            <span class="result-value" id="resultLtp">0.00 <span class="currency">BDT</span></span>
+          </div>
+          <div class="result-row">
+            <span class="result-label">Buy Price</span>
+            <span class="result-value" id="resultBuyPrice">0.00 <span class="currency">BDT</span></span>
+          </div>
+          <div class="result-divider"></div>
+          <div class="result-row result-pnl-row">
+            <span class="result-label">Total P/L</span>
+            <span class="result-value profit-loss" id="resultProfit">+0.00 <span class="currency">BDT</span></span>
+          </div>
+          <div class="result-row">
+            <span class="result-label">Change</span>
+            <span class="result-value profit-loss" id="resultPercent">+0.00%</span>
+          </div>
+        </div>
+        <div class="result-footer">
+          <a href="https://www.dsebd.org" target="_blank" class="dse-link">dsebd.org &nearr;</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ Undo Snackbar ═══ -->
+    <div id="snackbar" class="snackbar hidden">
+      <span id="snackbarText"></span>
+      <button id="snackbarUndo" class="snackbar-undo">Undo</button>
+    </div>
+
+    <footer class="footer">
+      <span id="statusText"></span>
+      <div class="footer-right">
+        <a href="https://www.dsebd.org" target="_blank" class="dse-link">dsebd.org &nearr;</a>
+        <span id="marketStatus" class="market-status"></span>
+      </div>
+    </footer>
+
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

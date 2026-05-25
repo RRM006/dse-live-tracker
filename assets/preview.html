@@ -1,0 +1,263 @@
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@500&display=swap');
+  .ext-wrap { display:flex; gap:32px; justify-content:center; flex-wrap:wrap; padding:1.5rem 0; }
+  .ext-phone { width:320px; border-radius:16px; overflow:hidden; border:1px solid var(--color-border-tertiary); font-family:'DM Sans',system-ui,sans-serif; background:#F1F5F9; flex-shrink:0; }
+  .ext-header { background:#0F172A; padding:12px 16px; display:flex; align-items:center; justify-content:space-between; }
+  .ext-brand { display:flex; align-items:center; gap:8px; }
+  .ext-title { font-size:15px; font-weight:700; color:#fff; letter-spacing:-0.01em; }
+  .ext-refresh { width:32px; height:32px; border-radius:8px; border:1px solid rgba(255,255,255,0.14); background:rgba(255,255,255,0.07); color:rgba(255,255,255,0.7); display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  .ext-main { padding:14px; display:flex; flex-direction:column; gap:12px; }
+  .ext-inputs { background:#fff; border-radius:12px; padding:16px; display:flex; flex-direction:column; gap:12px; box-shadow:0 1px 3px rgba(15,23,42,.07),0 4px 12px rgba(15,23,42,.04); }
+  .field-lbl { font-size:11px; font-weight:600; color:#64748B; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:4px; }
+  .field-wrap { position:relative; }
+  .field-pfx { position:absolute; left:10px; top:50%; transform:translateY(-50%); color:#94A3B8; font-size:13px; pointer-events:none; }
+  .field-inp { width:100%; height:38px; padding:0 10px 0 30px; background:#F8FAFC; border:1.5px solid #E2E8F0; border-radius:8px; font-size:13.5px; font-weight:500; color:#0F172A; font-family:'DM Sans',system-ui,sans-serif; outline:none; }
+  .btn-check { width:100%; height:40px; background:#2563EB; color:#fff; border:none; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 2px 8px rgba(37,99,235,.35); font-family:'DM Sans',system-ui,sans-serif; margin-top:2px; }
+  .result-card { background:#fff; border-radius:12px; overflow:hidden; box-shadow:0 1px 3px rgba(15,23,42,.07),0 4px 12px rgba(15,23,42,.04); }
+  .rc-head { padding:12px 16px 10px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #E2E8F0; }
+  .rc-sym { font-size:17px; font-weight:700; color:#0F172A; font-family:'DM Mono',monospace; }
+  .rc-badge { margin-left:6px; padding:1px 6px; background:#EFF6FF; color:#2563EB; font-size:10px; font-weight:700; border-radius:99px; }
+  .pill-profit { background:#BBF7D0; color:#16A34A; font-size:12px; font-weight:700; padding:3px 9px; border-radius:99px; }
+  .pill-loss   { background:#FECACA; color:#DC2626; font-size:12px; font-weight:700; padding:3px 9px; border-radius:99px; }
+  .rc-prices { display:flex; align-items:center; padding:12px 16px; }
+  .price-blk { flex:1; display:flex; flex-direction:column; gap:2px; }
+  .price-blk:last-child { align-items:flex-end; }
+  .p-lbl { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:0.07em; color:#94A3B8; }
+  .p-val { font-size:22px; font-weight:700; color:#0F172A; font-family:'DM Mono',monospace; letter-spacing:-0.02em; line-height:1.1; }
+  .p-unit { font-size:10px; color:#94A3B8; }
+  .p-divider { width:1px; height:40px; background:#E2E8F0; margin:0 12px; }
+  .pl-banner { margin:0 12px 12px; border-radius:8px; padding:12px; display:flex; align-items:center; justify-content:space-between; }
+  .pl-profit { background:#DCFCE7; }
+  .pl-loss   { background:#FEE2E2; }
+  .pll-label { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:0.07em; color:#64748B; }
+  .pll-amt-p { font-size:18px; font-weight:700; color:#16A34A; font-family:'DM Mono',monospace; }
+  .pll-amt-l { font-size:18px; font-weight:700; color:#DC2626; font-family:'DM Mono',monospace; }
+  .pll-pct-p { font-size:20px; font-weight:800; color:#16A34A; font-family:'DM Mono',monospace; }
+  .pll-pct-l { font-size:20px; font-weight:800; color:#DC2626; font-family:'DM Mono',monospace; }
+  .ext-footer { padding:8px 16px; display:flex; align-items:center; justify-content:space-between; border-top:1px solid #E2E8F0; background:#fff; font-size:11px; }
+  .foot-upd { color:#94A3B8; }
+  .foot-src { color:#2563EB; text-decoration:none; font-weight:500; }
+  .state-empty { display:flex; flex-direction:column; align-items:center; gap:8px; padding:16px 0 8px; text-align:center; }
+  .empty-title { font-size:13.5px; font-weight:600; color:#64748B; }
+  .empty-sub { font-size:12px; color:#94A3B8; line-height:1.5; max-width:200px; }
+  .tab-row { display:flex; gap:8px; margin-bottom:4px; }
+  .tab-btn { padding:5px 12px; border-radius:6px; border:1px solid #E2E8F0; background:#fff; font-size:12px; font-weight:600; cursor:pointer; color:#64748B; font-family:'DM Sans',sans-serif; transition:all .15s; }
+  .tab-btn.active { background:#2563EB; color:#fff; border-color:#2563EB; }
+  .panel-label { font-size:11px; color:#64748B; text-align:center; margin-bottom:6px; font-weight:500; }
+</style>
+
+<h2 class="sr-only">DSE Live Price Checker Chrome Extension — UI preview showing empty state and result state</h2>
+
+<div class="ext-wrap">
+
+  <!-- ── LEFT: Empty state ── -->
+  <div>
+    <p class="panel-label">① Input state</p>
+    <div class="ext-phone">
+      <header class="ext-header">
+        <div class="ext-brand">
+          <svg width="22" height="22" viewBox="0 0 20 20" fill="none"><rect x="2" y="10" width="3" height="8" rx="1" fill="#60A5FA"/><rect x="7" y="6" width="3" height="12" rx="1" fill="#3B82F6"/><rect x="12" y="2" width="3" height="16" rx="1" fill="#93C5FD"/><path d="M2 9 L7 5 L12 7 L17 2" stroke="#BFDBFE" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span class="ext-title">DSE Live Tracker</span>
+        </div>
+        <div class="ext-refresh">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M17 10A7 7 0 1 1 10 3" stroke="rgba(255,255,255,0.7)" stroke-width="1.8" stroke-linecap="round"/><path d="M10 1l3 3-3 3" stroke="rgba(255,255,255,0.7)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+      </header>
+      <main class="ext-main">
+        <div class="ext-inputs">
+          <div>
+            <div class="field-lbl">Stock Symbol</div>
+            <div class="field-wrap">
+              <span class="field-pfx">
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="#94A3B8" stroke-width="1.5"/><path d="M11 11l3 3" stroke="#94A3B8" stroke-width="1.5" stroke-linecap="round"/></svg>
+              </span>
+              <input class="field-inp" type="text" placeholder="e.g. GP, BEXIMCO" readonly />
+            </div>
+          </div>
+          <div>
+            <div class="field-lbl">Buy Price (BDT)</div>
+            <div class="field-wrap">
+              <span class="field-pfx">৳</span>
+              <input class="field-inp" type="text" placeholder="Enter your buy price" readonly />
+            </div>
+          </div>
+          <div>
+            <div class="field-lbl" style="color:#94A3B8">Quantity <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></div>
+            <div class="field-wrap">
+              <span class="field-pfx">#</span>
+              <input class="field-inp" type="text" placeholder="Number of shares" readonly />
+            </div>
+          </div>
+          <button class="btn-check">
+            Check Price
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+        <div class="state-empty">
+          <svg width="44" height="44" viewBox="0 0 48 48" fill="none" style="opacity:.65"><rect x="6" y="30" width="8" height="12" rx="2" fill="#BFDBFE"/><rect x="20" y="20" width="8" height="22" rx="2" fill="#93C5FD"/><rect x="34" y="10" width="8" height="32" rx="2" fill="#60A5FA"/><path d="M6 28l14-12 8 6 14-14" stroke="#3B82F6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div class="empty-title">Enter a stock symbol</div>
+          <div class="empty-sub">Type a symbol + your buy price to check live profit/loss.</div>
+        </div>
+      </main>
+      <footer class="ext-footer">
+        <span class="foot-upd">—</span>
+        <a class="foot-src" href="#">dsebd.org ↗</a>
+      </footer>
+    </div>
+  </div>
+
+  <!-- ── RIGHT: Result state (profit) ── -->
+  <div>
+    <p class="panel-label">② Result — Profit state</p>
+    <div class="ext-phone">
+      <header class="ext-header">
+        <div class="ext-brand">
+          <svg width="22" height="22" viewBox="0 0 20 20" fill="none"><rect x="2" y="10" width="3" height="8" rx="1" fill="#60A5FA"/><rect x="7" y="6" width="3" height="12" rx="1" fill="#3B82F6"/><rect x="12" y="2" width="3" height="16" rx="1" fill="#93C5FD"/><path d="M2 9 L7 5 L12 7 L17 2" stroke="#BFDBFE" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span class="ext-title">DSE Live Tracker</span>
+        </div>
+        <div class="ext-refresh">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M17 10A7 7 0 1 1 10 3" stroke="rgba(255,255,255,0.7)" stroke-width="1.8" stroke-linecap="round"/><path d="M10 1l3 3-3 3" stroke="rgba(255,255,255,0.7)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+      </header>
+      <main class="ext-main">
+        <div class="ext-inputs">
+          <div>
+            <div class="field-lbl">Stock Symbol</div>
+            <div class="field-wrap">
+              <span class="field-pfx"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="#94A3B8" stroke-width="1.5"/><path d="M11 11l3 3" stroke="#94A3B8" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+              <input class="field-inp" type="text" value="GP" readonly style="border-color:#2563EB;background:#fff;box-shadow:0 0 0 3px rgba(37,99,235,0.15)"/>
+            </div>
+          </div>
+          <div>
+            <div class="field-lbl">Buy Price (BDT)</div>
+            <div class="field-wrap">
+              <span class="field-pfx">৳</span>
+              <input class="field-inp" type="text" value="300" readonly style="border-color:#2563EB;background:#fff;box-shadow:0 0 0 3px rgba(37,99,235,0.15)"/>
+            </div>
+          </div>
+          <div>
+            <div class="field-lbl" style="color:#94A3B8">Quantity <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></div>
+            <div class="field-wrap">
+              <span class="field-pfx">#</span>
+              <input class="field-inp" type="text" value="500" readonly />
+            </div>
+          </div>
+          <button class="btn-check">
+            Check Price
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+        <!-- Result Card -->
+        <div class="result-card">
+          <div class="rc-head">
+            <div>
+              <span class="rc-sym">GP</span>
+              <span class="rc-badge">DSE</span>
+            </div>
+            <span class="pill-profit">+5.00%</span>
+          </div>
+          <div class="rc-prices">
+            <div class="price-blk">
+              <span class="p-lbl">LTP</span>
+              <span class="p-val">315</span>
+              <span class="p-unit">BDT</span>
+            </div>
+            <div class="p-divider"></div>
+            <div class="price-blk">
+              <span class="p-lbl">Buy</span>
+              <span class="p-val">300</span>
+              <span class="p-unit">BDT</span>
+            </div>
+          </div>
+          <div class="pl-banner pl-profit">
+            <div>
+              <div class="pll-label">Profit / Loss</div>
+              <div class="pll-amt-p">+15.00 BDT</div>
+            </div>
+            <div class="pll-pct-p">+5.00%</div>
+          </div>
+          <div style="border-top:1px solid #E2E8F0;padding:8px 16px;display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-size:11.5px;color:#64748B;">Total P&L × 500 shares</span>
+            <span style="font-size:13px;font-weight:700;color:#16A34A;font-family:'DM Mono',monospace;">+7,500.00 BDT</span>
+          </div>
+        </div>
+      </main>
+      <footer class="ext-footer">
+        <span class="foot-upd">Updated: 10:32:41</span>
+        <a class="foot-src" href="#">dsebd.org ↗</a>
+      </footer>
+    </div>
+  </div>
+
+  <!-- ── FAR RIGHT: Loss state ── -->
+  <div>
+    <p class="panel-label">③ Result — Loss state</p>
+    <div class="ext-phone">
+      <header class="ext-header">
+        <div class="ext-brand">
+          <svg width="22" height="22" viewBox="0 0 20 20" fill="none"><rect x="2" y="10" width="3" height="8" rx="1" fill="#60A5FA"/><rect x="7" y="6" width="3" height="12" rx="1" fill="#3B82F6"/><rect x="12" y="2" width="3" height="16" rx="1" fill="#93C5FD"/><path d="M2 9 L7 5 L12 7 L17 2" stroke="#BFDBFE" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span class="ext-title">DSE Live Tracker</span>
+        </div>
+        <div class="ext-refresh"><svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M17 10A7 7 0 1 1 10 3" stroke="rgba(255,255,255,0.7)" stroke-width="1.8" stroke-linecap="round"/><path d="M10 1l3 3-3 3" stroke="rgba(255,255,255,0.7)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      </header>
+      <main class="ext-main">
+        <div class="ext-inputs">
+          <div>
+            <div class="field-lbl">Stock Symbol</div>
+            <div class="field-wrap">
+              <span class="field-pfx"><svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="#94A3B8" stroke-width="1.5"/><path d="M11 11l3 3" stroke="#94A3B8" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+              <input class="field-inp" type="text" value="BEXIMCO" readonly />
+            </div>
+          </div>
+          <div>
+            <div class="field-lbl">Buy Price (BDT)</div>
+            <div class="field-wrap">
+              <span class="field-pfx">৳</span>
+              <input class="field-inp" type="text" value="55" readonly />
+            </div>
+          </div>
+          <div>
+            <div class="field-lbl" style="color:#94A3B8">Quantity <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></div>
+            <div class="field-wrap">
+              <span class="field-pfx">#</span>
+              <input class="field-inp" type="text" placeholder="Number of shares" readonly />
+            </div>
+          </div>
+          <button class="btn-check">Check Price <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        </div>
+        <div class="result-card">
+          <div class="rc-head">
+            <div><span class="rc-sym">BEXIMCO</span><span class="rc-badge">DSE</span></div>
+            <span class="pill-loss">−8.18%</span>
+          </div>
+          <div class="rc-prices">
+            <div class="price-blk">
+              <span class="p-lbl">LTP</span>
+              <span class="p-val">50.5</span>
+              <span class="p-unit">BDT</span>
+            </div>
+            <div class="p-divider"></div>
+            <div class="price-blk">
+              <span class="p-lbl">Buy</span>
+              <span class="p-val">55</span>
+              <span class="p-unit">BDT</span>
+            </div>
+          </div>
+          <div class="pl-banner pl-loss">
+            <div>
+              <div class="pll-label">Profit / Loss</div>
+              <div class="pll-amt-l">−4.50 BDT</div>
+            </div>
+            <div class="pll-pct-l">−8.18%</div>
+          </div>
+        </div>
+      </main>
+      <footer class="ext-footer">
+        <span class="foot-upd">Updated: 10:32:41</span>
+        <a class="foot-src" href="#">dsebd.org ↗</a>
+      </footer>
+    </div>
+  </div>
+
+</div>

@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "DSE Live Price Checker",
+  "version": "2.0.0",
+  "description": "Track DSE stocks, build a portfolio watchlist, and get live profit/loss updates.",
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "DSE Live Tracker"
+  },
+  "permissions": [
+    "storage",
+    "contextMenus",
+    "notifications"
+  ],
+  "host_permissions": [
+    "https://www.dsebd.org/*",
+    "https://corsproxy.io/*"
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com;"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+S",
+        "windows": "Ctrl+Shift+S",
+        "mac": "Command+Shift+S"
+      },
+      "description": "Open DSE Live Tracker"
+    }
+  }
+}

@@ -35,5 +35,5 @@ Native Android app built with Kotlin + Jetpack Compose. Same features as the ext
 ## Project Structure
 - `src/` - Chrome extension source code
 - `android/` - Android app source code
-- `docs/` - Detailed documentation and use cases
+- `docs/` - Detailed documentation, use cases, and development context/prompts
 - `assets/` - UI previews and mockups

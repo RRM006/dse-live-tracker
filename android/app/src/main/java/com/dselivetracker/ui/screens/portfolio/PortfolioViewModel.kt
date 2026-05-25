@@ -4,8 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.dselivetracker.DseApp
-import com.dselivetracker.data.remote.DseApiClient
-import com.dselivetracker.data.remote.QuotesParser
+import com.dselivetracker.data.local.entity.PortfolioStock
 import com.dselivetracker.data.repository.PortfolioRepository
 import com.dselivetracker.ui.components.PortfolioSummary
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,8 +18,10 @@ import java.util.Date
 import java.util.Locale
 
 class PortfolioViewModel(application: Application) : AndroidViewModel(application) {
-    private val db = (application as DseApp).database
+    private val app = application as DseApp
+    private val db = app.database
     private val portfolioRepo = PortfolioRepository(db.portfolioDao())
+    private val stockRepo = app.stockRepository
 
     private val stocks = portfolioRepo.getAllStocks()
 
@@ -87,19 +88,18 @@ class PortfolioViewModel(application: Application) : AndroidViewModel(applicatio
         viewModelScope.launch {
             _isRefreshing.value = true
             try {
-                val text = DseApiClient.fetchQuotes()
-                val parsed = QuotesParser.parse(text)
+                stockRepo.fetchAndUpdateAll()
                 val currentStocks = portfolioRepo.getAllStocksOnce()
                 for (stock in currentStocks) {
-                    val quote = parsed.quotes.find { it.symbol == stock.symbol }
-                    if (quote != null) {
+                    val info = stockRepo.getBySymbol(stock.symbol)
+                    if (info != null) {
                         val direction = when {
                             stock.lastLtp == null -> null
-                            quote.ltp > stock.lastLtp -> "up"
-                            quote.ltp < stock.lastLtp -> "down"
+                            info.ltp > stock.lastLtp -> "up"
+                            info.ltp < stock.lastLtp -> "down"
                             else -> "flat"
                         }
-                        portfolioRepo.updatePrice(stock.symbol, quote.ltp, direction)
+                        portfolioRepo.updatePrice(stock.symbol, info.ltp, direction)
                     }
                 }
                 val time = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())

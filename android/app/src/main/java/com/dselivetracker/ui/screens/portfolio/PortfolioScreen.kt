@@ -14,6 +14,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -21,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -44,6 +48,7 @@ fun PortfolioScreen(
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val lastUpdated by viewModel.lastUpdated.collectAsState()
     val error by viewModel.error.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) {
         viewModel.refresh()
@@ -53,77 +58,91 @@ fun PortfolioScreen(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        TopAppBar(
-            title = {
-                Text(
-                    text = "DSE Tracker",
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimary
+    LaunchedEffect(lastUpdated) {
+        if (lastUpdated != null) {
+            val message = if (lastUpdated!!.startsWith("Update failed"))
+                "Refresh failed \u2014 showing cached data"
+            else
+                "Data refreshed at ${lastUpdated!!.substringAfter("at ")}"
+            snackbarHostState.showSnackbar(message)
+        }
+    }
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+    ) { innerPadding ->
+        Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "DSE Tracker",
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                },
+                actions = {
+                    IconButton(onClick = {
+                        if (!isRefreshing) viewModel.refresh()
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Refresh",
+                            tint = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                    MarketStatusBar(
+                        modifier = Modifier.padding(end = 12.dp)
+                    )
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = DarkHeader
                 )
-            },
-            actions = {
-                IconButton(onClick = {
-                    if (!isRefreshing) viewModel.refresh()
-                }) {
-                    Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = "Refresh",
-                        tint = MaterialTheme.colorScheme.onPrimary
+            )
+
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp)
+            ) {
+                if (summary != null) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    SummaryCard(summary = summary!!)
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                if (error != null) {
+                    Text(
+                        text = error!!,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    viewModel.clearError()
+                }
+
+                AddStockForm(
+                    symbol = symbol,
+                    onSymbolChange = { viewModel.updateSymbol(it) },
+                    buyPrice = buyPrice,
+                    onBuyPriceChange = { viewModel.updateBuyPrice(it) },
+                    quantity = quantity,
+                    onQuantityChange = { viewModel.updateQuantity(it) },
+                    onAdd = { viewModel.addStock() }
+                )
+
+                if (lastUpdated != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Last updated: ${lastUpdated!!}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                MarketStatusBar(
-                    modifier = Modifier.padding(end = 12.dp)
-                )
-            },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = DarkHeader
-            )
-        )
 
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp)
-        ) {
-            if (summary != null) {
-                Spacer(modifier = Modifier.height(12.dp))
-                SummaryCard(summary = summary!!)
+                Spacer(modifier = Modifier.height(16.dp))
             }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            if (error != null) {
-                Text(
-                    text = error!!,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                viewModel.clearError()
-            }
-
-            AddStockForm(
-                symbol = symbol,
-                onSymbolChange = { viewModel.updateSymbol(it) },
-                buyPrice = buyPrice,
-                onBuyPriceChange = { viewModel.updateBuyPrice(it) },
-                quantity = quantity,
-                onQuantityChange = { viewModel.updateQuantity(it) },
-                onAdd = { viewModel.addStock() }
-            )
-
-            if (lastUpdated != null) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Last updated: ${lastUpdated!!}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }

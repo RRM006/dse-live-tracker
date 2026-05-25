@@ -23,11 +23,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 
   if (msg.type === 'SHOW_NOTIFICATION') {
-    chrome.notifications.create({
-      type: 'basic',
-      title: msg.title || 'Price Alert',
-      message: msg.message || '',
-      priority: 2
-    });
+    chrome.notifications.create(
+      msg.id || 'dse-notification',
+      {
+        type: 'basic',
+        title: msg.title || 'Price Alert',
+        message: msg.message || '',
+        priority: 2
+      }
+    );
   }
 });

@@ -371,11 +371,11 @@ body.dark .btn-add-watchlist:hover { background: rgba(59,130,246,0.1); }
 
 /* ─── Autocomplete ─── */
 .autocomplete-dropdown {
-  position: absolute; top: 100%; left: 0; right: 0;
+  position: fixed;
   background: var(--bg-card); border: 1px solid var(--border);
-  border-top: none; border-radius: 0 0 var(--radius-input) var(--radius-input);
+  border-radius: 0 0 var(--radius-input) var(--radius-input);
   box-shadow: var(--shadow-dropdown);
-  max-height: 200px; overflow-y: auto; z-index: 10;
+  max-height: 200px; overflow-y: auto; z-index: 1000;
 }
 .ac-item {
   padding: 8px 12px; cursor: pointer; font-size: 13px;
@@ -462,18 +462,37 @@ body.dark .btn-add-watchlist:hover { background: rgba(59,130,246,0.1); }
   white-space: nowrap;
   background: var(--border-light); color: var(--text-muted);
 }
-.qw-target.reached { background: #DCFCE7; color: #16A34A; }
-body.dark .qw-target.reached { background: #052E16; color: #4ADE80; }
+.qw-target.buy-signal { background: #DCFCE7; color: #16A34A; }
+body.dark .qw-target.buy-signal { background: #052E16; color: #4ADE80; }
 
-/* ─── Watchlist Target Reached Card Accent ─── */
-.wl-card.qw-card-target-hit {
-  border-left: 4px solid var(--profit);
+/* ─── Watchlist Buy Signal Card Accent (Sky Blue) ─── */
+.wl-card.qw-card-buy-signal {
+  border-left: 4px solid #00BFFF;
 }
-.wl-card.qw-card-target-hit .wl-ltp {
-  color: var(--profit); font-weight: 600;
+.wl-card.qw-card-buy-signal .wl-ltp {
+  color: #00BFFF; font-weight: 600;
 }
-body.dark .wl-card.qw-card-target-hit { border-left-color: #4ADE80; }
-body.dark .wl-card.qw-card-target-hit .wl-ltp { color: #4ADE80; }
+body.dark .wl-card.qw-card-buy-signal { border-left-color: #00BFFF; }
+body.dark .wl-card.qw-card-buy-signal .wl-ltp { color: #00BFFF; }
+
+/* ─── YCP line on cards ─── */
+.wl-ycp {
+  font-size: 10px; color: var(--text-muted);
+  margin-top: 4px;
+}
+.wl-card-bot-single {
+  margin-top: 4px; padding-top: 4px;
+  border-top: 1px solid var(--border-light);
+  font-size: 11px; color: var(--text-muted);
+}
+
+/* ─── Result Card 2-Column Grid ─── */
+.result-grid {
+  display: flex; gap: var(--spacing-lg);
+}
+.result-grid-col {
+  flex: 1; display: flex; flex-direction: column; gap: 6px;
+}
 
 /* ─── Undo Snackbar ─── */
 .snackbar {

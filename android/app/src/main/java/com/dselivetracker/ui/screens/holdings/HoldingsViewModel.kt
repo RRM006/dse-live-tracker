@@ -25,8 +25,10 @@ enum class SortMode(val label: String) {
 }
 
 class HoldingsViewModel(application: Application) : AndroidViewModel(application) {
-    private val db = (application as DseApp).database
+    private val app = application as DseApp
+    private val db = app.database
     private val portfolioRepo = PortfolioRepository(db.portfolioDao())
+    private val stockRepo = app.stockRepository
 
     private val _sortMode = MutableStateFlow(SortMode.PNL_ASC)
     val sortMode: StateFlow<SortMode> = _sortMode
@@ -54,6 +56,23 @@ class HoldingsViewModel(application: Application) : AndroidViewModel(application
     val pendingRemove: StateFlow<PortfolioStock?> = _pendingRemove
 
     private var undoJob: Job? = null
+
+    private val _ycpMap = MutableStateFlow<Map<String, Double>>(emptyMap())
+    val ycpMap: StateFlow<Map<String, Double>> = _ycpMap
+
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing
+
+    private val _lastUpdated = MutableStateFlow<String?>(null)
+    val lastUpdated: StateFlow<String?> = _lastUpdated
+
+    init {
+        viewModelScope.launch {
+            stockRepo.allStocks.collect { stocks ->
+                _ycpMap.value = stocks.mapValues { it.value.ycp }
+            }
+        }
+    }
 
     fun setSortMode(mode: SortMode) {
         _sortMode.value = mode
@@ -83,5 +102,33 @@ class HoldingsViewModel(application: Application) : AndroidViewModel(application
 
     fun clearPendingRemove() {
         _pendingRemove.value = null
+    }
+
+    fun refresh() {
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            try {
+                stockRepo.fetchAndUpdateAll()
+                val currentStocks = portfolioRepo.getAllStocksOnce()
+                for (stock in currentStocks) {
+                    val info = stockRepo.getBySymbol(stock.symbol)
+                    if (info != null) {
+                        val direction = when {
+                            stock.lastLtp == null -> null
+                            info.ltp > stock.lastLtp -> "up"
+                            info.ltp < stock.lastLtp -> "down"
+                            else -> "flat"
+                        }
+                        portfolioRepo.updatePrice(stock.symbol, info.ltp, direction)
+                    }
+                }
+                val time = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())
+                _lastUpdated.value = "Holdings updated at $time"
+            } catch (e: Exception) {
+                _lastUpdated.value = "Update failed"
+            } finally {
+                _isRefreshing.value = false
+            }
+        }
     }
 }

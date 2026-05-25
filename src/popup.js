@@ -3,6 +3,8 @@
 
   const QUOTES_URL = 'https://www.dsebd.org/datafile/quotes.txt';
   const PROXY_URL = 'https://corsproxy.io/?' + encodeURIComponent(QUOTES_URL);
+  const FULL_QUOTES_URL = 'https://www.dsebd.org/latest_share_price_scroll_l.php';
+  const FULL_PROXY_URL = 'https://corsproxy.io/?' + encodeURIComponent(FULL_QUOTES_URL);
   const AUTO_REFRESH_MS = 30000;
   const MAX_RETRIES = 2;
   const RETRY_DELAY = 1500;
@@ -59,6 +61,9 @@
     dom.snackbar = $('snackbar');
     dom.snackbarText = $('snackbarText');
     dom.snackbarUndo = $('snackbarUndo');
+    dom.resultYcp = $('resultYcp');
+    dom.resultHigh = $('resultHigh');
+    dom.resultLow = $('resultLow');
   }
 
   let watchlist = [];
@@ -74,6 +79,9 @@
   let isEditingWatchlist = null;
   let undoTimeout = null;
   let pendingRemove = null;
+  let stockData = {};
+  let acActiveInput = null;
+  let notifiedAt = {};
 
   document.addEventListener('DOMContentLoaded', () => {
     cacheDOM();
@@ -92,9 +100,9 @@
 
     const activeView = document.querySelector('.tab.active').dataset.view;
     if (activeView === 'portfolio' || activeView === 'holdings') {
-      if (watchlist.length) refreshWatchlistPrices();
+      if (watchlist.length) refreshAllData();
     } else if (activeView === 'watchlist' && quickWatch.length) {
-      refreshQuickWatchPrices();
+      refreshAllData();
     }
 
     if (watchlist.length || quickWatch.length) {
@@ -127,19 +135,11 @@
       renderHoldings();
     });
 
-    dom.refreshBtn.addEventListener('click', () => {
-      const activeView = document.querySelector('.tab.active').dataset.view;
-      if (activeView === 'portfolio' || activeView === 'holdings') {
-        refreshWatchlistPrices();
-      } else if (activeView === 'watchlist') {
-        refreshQuickWatchPrices();
-      } else if (hasResult) {
-        fetchAndRender(lastSymbol, lastBuyPrice, lastQty, true);
-      }
-    });
+    dom.refreshBtn.addEventListener('click', refreshAllData);
 
     dom.symbol.addEventListener('input', () => {
       dom.symbol.value = dom.symbol.value.toUpperCase();
+      acActiveInput = 'search';
       handleAutocomplete(dom.symbol.value);
     });
     dom.symbol.addEventListener('keydown', (e) => {
@@ -177,10 +177,16 @@
 
     dom.qwSymbol.addEventListener('input', () => {
       dom.qwSymbol.value = dom.qwSymbol.value.toUpperCase();
+      acActiveInput = 'watchlist';
+      handleAutocomplete(dom.qwSymbol.value);
     });
     dom.qwSymbol.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') dom.qwTarget.focus();
+      if (e.key === 'ArrowDown') moveAutocomplete(1);
+      if (e.key === 'ArrowUp') moveAutocomplete(-1);
+      if (e.key === 'Enter') { hideAutocomplete(); dom.qwTarget.focus(); }
     });
+    dom.qwSymbol.addEventListener('blur', () => setTimeout(hideAutocomplete, 200));
+
     dom.qwTarget.addEventListener('input', () => {
       dom.qwTarget.classList.toggle('input-target-set', dom.qwTarget.value.trim() !== '');
     });
@@ -203,6 +209,8 @@
     dom.viewHoldings.classList.toggle('active', view === 'holdings');
     dom.viewWatchlist.classList.toggle('active', view === 'watchlist');
     dom.viewSearch.classList.toggle('active', view === 'search');
+
+    hideAutocomplete();
 
     if (view === 'portfolio') {
       renderSummary();
@@ -247,7 +255,7 @@
     renderSummary();
     renderHoldings();
     updateBadges();
-    if (!refreshInterval) refreshWatchlistPrices();
+    if (!refreshInterval) refreshAllData();
     dom.addSymbol.focus();
   }
 
@@ -372,7 +380,7 @@
     dom.qwTarget.value = '';
     renderQuickWatch();
     updateBadges();
-    if (!refreshInterval) refreshQuickWatchPrices();
+    if (!refreshInterval) refreshAllData();
     dom.qwSymbol.focus();
   }
 
@@ -381,6 +389,10 @@
     saveQuickWatch();
     renderQuickWatch();
     updateBadges();
+  }
+
+  function getStockInfo(symbol) {
+    return stockData[symbol] || null;
   }
 
   function renderQuickWatch() {
@@ -403,31 +415,57 @@
       card.className = 'wl-card';
       card.dataset.symbol = item.symbol;
 
-      const ltpValue = item._ltp;
-      const ltpDisplay = ltpValue !== undefined ? formatBDT(ltpValue) + ' BDT' : 'Awaiting data...';
+      const info = getStockInfo(item.symbol);
+      const ltpValue = item._ltp !== undefined ? item._ltp : (info ? info.ltp : undefined);
+      const ycpValue = info ? info.ycp : undefined;
+
+      if (ltpValue !== undefined && info && item._ltp === undefined) {
+        item._ltp = ltpValue;
+        item._ycp = ycpValue;
+      }
+      if (ycpValue !== undefined) item._ycp = ycpValue;
+
+      const displayLtp = item._ltp;
+      const displayYcp = item._ycp;
+
+      const ltpDisplay = displayLtp !== undefined ? '\u09F3' + formatBDT(displayLtp) : 'Awaiting data...';
 
       let arrow = '';
-      if (item._direction === 'up') arrow = '<span class="wl-direction up">\u2191</span>';
-      else if (item._direction === 'down') arrow = '<span class="wl-direction down">\u2193</span>';
-      else if (ltpValue !== undefined) arrow = '<span class="wl-direction flat">\u2192</span>';
+      if (displayLtp !== undefined && displayYcp !== undefined) {
+        if (displayLtp > displayYcp) arrow = '<span class="wl-direction up">\u2191</span>';
+        else if (displayLtp < displayYcp) arrow = '<span class="wl-direction down">\u2193</span>';
+        else arrow = '<span class="wl-direction flat">\u2192</span>';
+      } else if (displayLtp !== undefined) {
+        arrow = '<span class="wl-direction flat">\u2192</span>';
+      }
 
       let pctDisplay = '';
       let pctColor = '';
-      if (ltpValue !== undefined && item._prevLtp !== undefined && item._prevLtp > 0) {
-        const pct = ((ltpValue - item._prevLtp) / item._prevLtp) * 100;
+      if (displayLtp !== undefined && displayYcp !== undefined && displayYcp > 0) {
+        const pct = ((displayLtp - displayYcp) / displayYcp) * 100;
         const isProfit = pct >= 0;
         pctColor = isProfit ? 'profit-text' : 'loss-text';
         pctDisplay = (isProfit ? '+' : '') + pct.toFixed(2) + '%';
-      } else if (ltpValue !== undefined) {
+      } else if (displayLtp !== undefined) {
         pctDisplay = '--';
       }
 
       let targetBadge = '';
-      if (item.targetPrice && ltpValue !== undefined) {
-        const reached = ltpValue >= item.targetPrice;
-        targetBadge = '<span class="qw-target' + (reached ? ' reached' : '') + '">'
-          + (reached ? '&#10003;' : '&#127919;') + ' ' + formatBDT(item.targetPrice) + '</span>';
-        if (reached) card.classList.add('qw-card-target-hit');
+      let isBuySignal = false;
+      if (item.targetPrice && displayLtp !== undefined) {
+        const buySignal = displayLtp <= item.targetPrice;
+        isBuySignal = buySignal;
+        if (buySignal) {
+          targetBadge = '<span class="qw-target buy-signal">\u2705 BUY SIGNAL</span>';
+          card.classList.add('qw-card-buy-signal');
+        } else {
+          targetBadge = '<span class="qw-target">\uD83C\uDFAF ' + formatBDT(item.targetPrice) + '</span>';
+        }
+      }
+
+      let ycpLine = '';
+      if (displayYcp !== undefined) {
+        ycpLine = '<div class="wl-ycp">YCP: \u09F3' + formatBDT(displayYcp) + '</div>';
       }
 
       card.innerHTML = `
@@ -442,7 +480,8 @@
         <div class="wl-card-mid">
           <span class="wl-ltp">LTP: ${ltpDisplay}</span>
           <span class="wl-percent ${pctColor}">${pctDisplay}</span>
-        </div>`;
+        </div>
+        ${ycpLine ? '<div class="wl-card-bot-single">' + ycpLine + '</div>' : ''}`;
 
       const removeBtn = card.querySelector('.wl-remove');
       removeBtn.addEventListener('click', (e) => {
@@ -451,42 +490,31 @@
       });
 
       dom.qwContainer.appendChild(card);
+
+      if (isBuySignal && item.targetPrice && displayLtp !== undefined) {
+        const lastNotified = notifiedAt[item.symbol];
+        const wasAbove = lastNotified !== undefined && lastNotified === 'above';
+        if (lastNotified === undefined || wasAbove) {
+          notifiedAt[item.symbol] = displayLtp;
+          try {
+            chrome.runtime.sendMessage({
+              type: 'SHOW_NOTIFICATION',
+              title: '\uD83D\uDFE6 Buy Signal: ' + item.symbol,
+              message: 'LTP \u09F3' + displayLtp + ' has reached your target \u09F3' + item.targetPrice + '. Possible entry point!',
+              id: 'watchlist-' + item.symbol
+            });
+          } catch (e) {}
+        }
+      }
+
+      if (item.targetPrice && displayLtp !== undefined && displayLtp > item.targetPrice) {
+        notifiedAt[item.symbol] = 'above';
+      }
     });
   }
 
   async function refreshQuickWatchPrices() {
-    if (!quickWatch.length) return;
-    dom.refreshBtn.classList.add('spinning');
-    updateStatus('Updating watchlist...');
-
-    try {
-      const text = await fetchWithRetry();
-      const parsed = parseAllQuotes(text);
-
-      quickWatch.forEach(item => {
-        const found = parsed.find(p => p.symbol === item.symbol);
-        if (found) {
-          if (item._ltp !== undefined) {
-            item._prevLtp = item._ltp;
-          }
-          item._ltp = found.ltp;
-
-          if (item._prevLtp !== undefined) {
-            if (item._ltp > item._prevLtp) item._direction = 'up';
-            else if (item._ltp < item._prevLtp) item._direction = 'down';
-            else item._direction = 'flat';
-          }
-        }
-      });
-
-      saveQuickWatch();
-      updateStatus('Watchlist updated at ' + new Date().toLocaleTimeString());
-      renderQuickWatch();
-    } catch (err) {
-      updateStatus('Update failed');
-    } finally {
-      dom.refreshBtn.classList.remove('spinning');
-    }
+    await refreshAllData();
   }
 
   function getSortedWatchlist() {
@@ -606,6 +634,14 @@
       card.className = 'wl-card';
       card.dataset.symbol = item.symbol;
 
+      const info = getStockInfo(item.symbol);
+      if (info && item._ltp === undefined) {
+        item._ltp = info.ltp;
+        item._ycp = info.ycp;
+      } else if (info) {
+        item._ycp = info.ycp;
+      }
+
       const pnl = item._ltp !== undefined ? (item._ltp - item.buyPrice) * (item.qty || 1) : null;
       const pct = item._ltp !== undefined && item.buyPrice > 0
         ? ((item._ltp - item.buyPrice) / item.buyPrice) * 100
@@ -622,9 +658,21 @@
       const ltpDisplay = item._ltp !== undefined ? formatBDT(item._ltp) + ' BDT' : 'Awaiting data...';
 
       let arrow = '';
-      if (item._direction === 'up') arrow = '<span class="wl-direction up">\u2191</span>';
-      else if (item._direction === 'down') arrow = '<span class="wl-direction down">\u2193</span>';
-      else if (item._ltp !== undefined) arrow = '<span class="wl-direction flat">\u2192</span>';
+      if (item._ltp !== undefined && item._ycp !== undefined) {
+        if (item._ltp > item._ycp) arrow = '<span class="wl-direction up">\u2191</span>';
+        else if (item._ltp < item._ycp) arrow = '<span class="wl-direction down">\u2193</span>';
+        else arrow = '<span class="wl-direction flat">\u2192</span>';
+      } else if (item._ltp !== undefined) {
+        arrow = '<span class="wl-direction flat">\u2192</span>';
+      }
+
+      let ycpLine = '';
+      if (item._ycp !== undefined) {
+        const dayPct = item._ltp !== undefined && item._ycp > 0 ? ((item._ltp - item._ycp) / item._ycp) * 100 : null;
+        const dayColor = dayPct !== null ? (dayPct >= 0 ? 'profit-text' : 'loss-text') : '';
+        const dayStr = dayPct !== null ? (dayPct >= 0 ? '+' : '') + dayPct.toFixed(2) + '%' : '';
+        ycpLine = 'YCP: \u09F3' + formatBDT(item._ycp) + (dayStr ? ' <span class="' + dayColor + '">(' + dayStr + ')</span>' : '');
+      }
 
       card.innerHTML = `
         <div class="wl-card-top">
@@ -643,7 +691,8 @@
           <span>Buy: ${formatBDT(item.buyPrice)}</span>
           <span>&times; ${item.qty || 1}</span>
           <span>= ${formatBDT(item.buyPrice * (item.qty || 1))}</span>
-        </div>`;
+        </div>
+        ${ycpLine ? '<div class="wl-card-bot-single">' + ycpLine + '</div>' : ''}`;
 
       card.addEventListener('click', (e) => {
         if (e.target.closest('.wl-remove')) return;
@@ -661,44 +710,98 @@
   }
 
   async function refreshWatchlistPrices() {
-    if (!watchlist.length) return;
+    await refreshAllData();
+  }
+
+  async function refreshAllData() {
     dom.refreshBtn.classList.add('spinning');
-    updateStatus('Updating portfolio...');
+    updateStatus('Refreshing data...');
 
     try {
-      const text = await fetchWithRetry();
-      const parsed = parseAllQuotes(text);
+      const [text1, html2] = await Promise.all([
+        fetchWithRetry(QUOTES_URL, PROXY_URL).catch(() => null),
+        fetchWithRetry(FULL_QUOTES_URL, FULL_PROXY_URL).catch(() => null)
+      ]);
 
-      let anyUpdated = false;
-      watchlist.forEach(item => {
-        const found = parsed.find(p => p.symbol === item.symbol);
-        if (found) {
-          if (item._ltp !== undefined) {
-            item._prevLtp = item._ltp;
+      stockData = {};
+
+      if (html2) {
+        const fullData = parseFullQuotes(html2);
+        Object.assign(stockData, fullData);
+      }
+
+      if (text1) {
+        const basicData = parseAllQuotesMap(text1);
+        for (const [sym, ltp] of Object.entries(basicData)) {
+          if (stockData[sym]) {
+            if (!stockData[sym].ltp || stockData[sym].ltp === 0) stockData[sym].ltp = ltp;
+          } else {
+            stockData[sym] = { symbol: sym, ltp, high: 0, low: 0, closep: 0, ycp: 0, change: 0, pctChange: 0 };
           }
-          item._ltp = found.ltp;
-          item._timestamp = found.timestamp;
-
-          if (item._prevLtp !== undefined) {
-            if (item._ltp > item._prevLtp) item._direction = 'up';
-            else if (item._ltp < item._prevLtp) item._direction = 'down';
-            else item._direction = 'flat';
-          }
-
-          anyUpdated = true;
-        } else {
-          item._ltp = undefined;
-          item._direction = undefined;
         }
-      });
+      }
 
-      saveWatchlist();
+      autoCompleteCache = Object.keys(stockData).sort();
 
-      if (anyUpdated) updateStatus('Portfolio updated at ' + new Date().toLocaleTimeString());
-      updateBadge();
+      const activeView = document.querySelector('.tab.active').dataset.view;
 
-      renderSummary();
-      renderHoldings();
+      if (watchlist.length) {
+        let anyUpdated = false;
+        watchlist.forEach(item => {
+          const info = stockData[item.symbol];
+          if (info && info.ltp > 0) {
+            if (item._ltp !== undefined) item._prevLtp = item._ltp;
+            item._ltp = info.ltp;
+            item._ycp = info.ycp;
+            item._timestamp = '';
+            item._high = info.high;
+            item._low = info.low;
+            item._closep = info.closep;
+            if (item._prevLtp !== undefined) {
+              if (item._ltp > item._prevLtp) item._direction = 'up';
+              else if (item._ltp < item._prevLtp) item._direction = 'down';
+              else item._direction = 'flat';
+            }
+            anyUpdated = true;
+          }
+        });
+        if (anyUpdated) saveWatchlist();
+        updateBadge();
+        if (activeView === 'portfolio' || activeView === 'holdings') {
+          renderSummary();
+          renderHoldings();
+        }
+      }
+
+      if (quickWatch.length) {
+        quickWatch.forEach(item => {
+          const info = stockData[item.symbol];
+          if (info && info.ltp > 0) {
+            if (item._ltp !== undefined) item._prevLtp = item._ltp;
+            item._ltp = info.ltp;
+            item._ycp = info.ycp;
+            item._high = info.high;
+            item._low = info.low;
+            item._closep = info.closep;
+            if (item._prevLtp !== undefined) {
+              if (item._ltp > item._prevLtp) item._direction = 'up';
+              else if (item._ltp < item._prevLtp) item._direction = 'down';
+              else item._direction = 'flat';
+            }
+          }
+        });
+        saveQuickWatch();
+        if (activeView === 'watchlist') renderQuickWatch();
+      }
+
+      if (hasResult && stockData[lastSymbol]) {
+        const info = stockData[lastSymbol];
+        if (info && info.ltp > 0) {
+          fetchAndRender(lastSymbol, lastBuyPrice, lastQty, true);
+        }
+      }
+
+      updateStatus('Updated at ' + new Date().toLocaleTimeString());
     } catch (err) {
       updateStatus('Update failed');
     } finally {
@@ -724,15 +827,25 @@
     }
 
     try {
-      const text = await fetchWithRetry();
-      const result = parseQuotes(text, symbol);
+      if (!stockData[symbol]) {
+        const text = await fetchWithRetry(QUOTES_URL, PROXY_URL);
+        const parsed = parseAllQuotesMap(text);
+        const ltp = parsed[symbol];
+        if (ltp === undefined) {
+          if (!silent) { setLoading(false); showError('Stock "' + symbol + '" not found in DSE data'); }
+          return;
+        }
+        if (!stockData[symbol]) stockData[symbol] = { symbol, ltp, high: 0, low: 0, closep: 0, ycp: 0, change: 0, pctChange: 0 };
+        if (!autoCompleteCache.length) autoCompleteCache = Object.keys(parsed).sort();
+      }
 
-      if (!result) {
-        if (!silent) { setLoading(false); showError('Stock "' + symbol + '" not found in DSE data'); }
+      const info = stockData[symbol];
+      if (!info || !info.ltp) {
+        if (!silent) { setLoading(false); showError('Stock "' + symbol + '" not found'); }
         return;
       }
 
-      const ltp = result.ltp;
+      const ltp = info.ltp;
       const profitPerShare = ltp - buyPrice;
       const totalProfit = profitPerShare * qty;
       const percent = buyPrice > 0 ? (profitPerShare / buyPrice) * 100 : 0;
@@ -742,12 +855,8 @@
       lastQty = qty;
       hasResult = true;
 
-      if (!autoCompleteCache.length) {
-        buildAutocompleteCache(text);
-      }
-
-      renderResult({ symbol, ltp, buyPrice, qty, profit: totalProfit, percent });
-      updateStatus(result.timestamp || 'just now');
+      renderResult({ symbol, ltp, buyPrice, qty, profit: totalProfit, percent, ycp: info.ycp, high: info.high, low: info.low, closep: info.closep });
+      updateStatus(info.timestamp || 'just now');
       updateBadge();
 
       if (!silent) {
@@ -779,8 +888,8 @@
     }
   }
 
-  async function fetchWithRetry() {
-    const sources = [QUOTES_URL, PROXY_URL];
+  async function fetchWithRetry(primaryUrl, proxyUrl) {
+    const sources = [primaryUrl, proxyUrl];
     for (const url of sources) {
       for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
         try {
@@ -797,6 +906,49 @@
   }
 
   function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  function parseFullQuotes(html) {
+    const data = {};
+    try {
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const rows = doc.querySelectorAll('table tbody tr');
+      rows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length >= 9) {
+          const symbol = cells[1].textContent.trim().toUpperCase();
+          if (!symbol) return;
+          data[symbol] = {
+            symbol,
+            ltp: parseFloat(cells[2].textContent.replace(/,/g, '')) || 0,
+            high: parseFloat(cells[3].textContent.replace(/,/g, '')) || 0,
+            low: parseFloat(cells[4].textContent.replace(/,/g, '')) || 0,
+            closep: parseFloat(cells[5].textContent.replace(/,/g, '')) || 0,
+            ycp: parseFloat(cells[6].textContent.replace(/,/g, '')) || 0,
+            change: parseFloat(cells[7].textContent.replace(/,/g, '')) || 0,
+            pctChange: parseFloat(cells[8].textContent.replace(/,/g, '').replace('%', '')) || 0
+          };
+        }
+      });
+    } catch (e) {}
+    return data;
+  }
+
+  function parseAllQuotesMap(text) {
+    const lines = text.split('\n');
+    const map = {};
+    if (lines.length < 4) return map;
+    for (let i = 4; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      const parts = line.split(/\s+/);
+      if (parts.length >= 2) {
+        const symbol = parts[0].toUpperCase();
+        const ltp = parseFloat(parts[1]);
+        if (!isNaN(ltp)) map[symbol] = ltp;
+      }
+    }
+    return map;
+  }
 
   function parseQuotes(text, searchSymbol) {
     const lines = text.split('\n');
@@ -856,21 +1008,39 @@
   function handleAutocomplete(query) {
     if (!query || query.length < 1) { hideAutocomplete(); return; }
 
-    const matches = autoCompleteCache
-      .filter(s => s.includes(query))
-      .slice(0, 12);
+    const sourceList = autoCompleteCache.length ? autoCompleteCache : Object.keys(stockData);
+    const startsWith = [];
+    const includes = [];
+
+    sourceList.forEach(s => {
+      if (s.startsWith(query)) startsWith.push(s);
+      else if (s.includes(query)) includes.push(s);
+    });
+
+    const matches = [...startsWith, ...includes].slice(0, 8);
 
     if (!matches.length) { hideAutocomplete(); return; }
 
+    acIndex = -1;
     dom.autocomplete.innerHTML = '';
+
+    const inputRect = acActiveInput === 'watchlist' ? dom.qwSymbol.getBoundingClientRect() : dom.symbol.getBoundingClientRect();
+    dom.autocomplete.style.top = (inputRect.bottom - document.querySelector('#app').getBoundingClientRect().top) + 'px';
+    dom.autocomplete.style.left = (inputRect.left - document.querySelector('#app').getBoundingClientRect().left) + 'px';
+    dom.autocomplete.style.width = inputRect.width + 'px';
+
     matches.forEach((match, idx) => {
       const div = document.createElement('div');
       div.className = 'ac-item' + (idx === acIndex ? ' selected' : '');
       div.textContent = match;
       div.addEventListener('mousedown', () => {
-        dom.symbol.value = match;
+        if (acActiveInput === 'watchlist') {
+          dom.qwSymbol.value = match;
+        } else {
+          dom.symbol.value = match;
+        }
         hideAutocomplete();
-        dom.buyPrice.focus();
+        if (acActiveInput !== 'watchlist') dom.buyPrice.focus();
       });
       div.addEventListener('mouseenter', () => {
         acIndex = idx;
@@ -887,7 +1057,12 @@
     acIndex = Math.max(-1, Math.min(items.length - 1, acIndex + dir));
     highlightAcItem();
     if (acIndex >= 0 && items[acIndex]) {
-      dom.symbol.value = items[acIndex].textContent;
+      const val = items[acIndex].textContent;
+      if (acActiveInput === 'watchlist') {
+        dom.qwSymbol.value = val;
+      } else {
+        dom.symbol.value = val;
+      }
     }
   }
 
@@ -906,20 +1081,32 @@
     dom.resultSymbol.textContent = data.symbol;
     dom.resultQty.textContent = '\u00d7 ' + data.qty;
 
-    dom.resultLtp.innerHTML = formatBDT(data.ltp) + ' <span class="currency">BDT</span>';
-    dom.resultBuyPrice.innerHTML = formatBDT(data.buyPrice) + ' <span class="currency">BDT</span>';
+    dom.resultLtp.innerHTML = '\u09F3' + formatBDT(data.ltp) + ' <span class="currency">BDT</span>';
+    dom.resultBuyPrice.innerHTML = '\u09F3' + formatBDT(data.buyPrice) + ' <span class="currency">BDT</span>';
 
     const isProfit = data.profit >= 0;
     const sign = isProfit ? '+' : '-';
     const absProfit = Math.abs(data.profit);
     const colorClass = isProfit ? 'profit-text' : 'loss-text';
 
-    dom.resultProfit.textContent = sign + formatBDT(absProfit);
+    dom.resultProfit.textContent = sign + '\u09F3' + formatBDT(absProfit);
     dom.resultProfit.innerHTML += ' <span class="currency">BDT</span>';
     dom.resultProfit.className = 'result-value profit-loss ' + colorClass;
 
     dom.resultPercent.textContent = sign + Math.abs(data.percent).toFixed(2) + '%';
     dom.resultPercent.className = 'result-value profit-loss ' + colorClass;
+
+    if (dom.resultYcp) {
+      dom.resultYcp.innerHTML = '\u09F3' + formatBDT(data.ycp || 0) + ' <span class="currency">BDT</span>';
+    }
+    if (dom.resultHigh) {
+      dom.resultHigh.innerHTML = '\u09F3' + formatBDT(data.high || 0) + ' <span class="currency">BDT</span>';
+      dom.resultHigh.className = 'result-value profit-text';
+    }
+    if (dom.resultLow) {
+      dom.resultLow.innerHTML = '\u09F3' + formatBDT(data.low || 0) + ' <span class="currency">BDT</span>';
+      dom.resultLow.className = 'result-value loss-text';
+    }
 
     dom.resultCard.classList.remove('hidden');
     dom.errorMsg.classList.add('hidden');
@@ -1061,9 +1248,9 @@
     refreshInterval = setInterval(() => {
       const activeView = document.querySelector('.tab.active').dataset.view;
       if (activeView === 'portfolio' || activeView === 'holdings') {
-        if (watchlist.length) refreshWatchlistPrices();
+        if (watchlist.length) refreshAllData();
       } else if (activeView === 'watchlist') {
-        if (quickWatch.length) refreshQuickWatchPrices();
+        if (quickWatch.length) refreshAllData();
       } else if (hasResult) {
         fetchAndRender(lastSymbol, lastBuyPrice, lastQty, true);
       }

@@ -11,11 +11,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
@@ -50,6 +54,8 @@ fun HoldingsScreen(
     val sortedStocks by viewModel.sortedStocks.collectAsState()
     val sortMode by viewModel.sortMode.collectAsState()
     val pendingRemove by viewModel.pendingRemove.collectAsState()
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val ycpMap by viewModel.ycpMap.collectAsState()
 
     var showSortMenu by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -93,6 +99,17 @@ fun HoldingsScreen(
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onPrimary
                     )
+                },
+                actions = {
+                    IconButton(onClick = {
+                        if (!isRefreshing) viewModel.refresh()
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Refresh",
+                            tint = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = DarkHeader
@@ -186,7 +203,8 @@ fun HoldingsScreen(
                                     stock.buyPrice.toString(),
                                     (stock.quantity).toString()
                                 )
-                            }
+                            },
+                            ycp = ycpMap[stock.symbol]
                         )
                     }
                     item { Spacer(modifier = Modifier.height(8.dp)) }

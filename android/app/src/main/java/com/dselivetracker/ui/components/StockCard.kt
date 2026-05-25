@@ -1,6 +1,7 @@
 package com.dselivetracker.ui.components
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,10 +15,18 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.dselivetracker.ui.theme.LossRed
 import com.dselivetracker.ui.theme.ProfitGreen
+import com.dselivetracker.ui.theme.TextMuted
+
+val SkyBlue = Color(0xFF00BFFF)
+val DirectionUp = Color(0xFF4CAF50)
+val DirectionDown = Color(0xFFF44336)
 
 @Composable
 fun StockCard(
@@ -30,7 +39,8 @@ fun StockCard(
     showRemove: Boolean = false,
     onRemove: (() -> Unit)? = null,
     onClick: (() -> Unit)? = null,
-    targetHit: Boolean = false
+    targetHit: Boolean = false,
+    ycp: Double? = null
 ) {
     val pnl = if (lastLtp != null) (lastLtp - buyPrice) * quantity else null
     val pct = if (lastLtp != null && buyPrice > 0) ((lastLtp - buyPrice) / buyPrice) * 100 else null
@@ -41,19 +51,30 @@ fun StockCard(
         else -> LossRed
     }
 
-    val arrow = when (direction) {
-        "up" -> "\u2191"
-        "down" -> "\u2193"
-        else -> if (lastLtp != null) "\u2192" else ""
+    val arrow = if (lastLtp != null && ycp != null) {
+        if (lastLtp > ycp) "\u2191"
+        else if (lastLtp < ycp) "\u2193"
+        else "\u2192"
+    } else ""
+
+    val arrowColor = when (arrow) {
+        "\u2191" -> DirectionUp
+        "\u2193" -> DirectionDown
+        else -> TextMuted
     }
 
     Card(
         modifier = modifier
             .fillMaxWidth()
+            .then(if (targetHit) Modifier.drawBehind {
+                drawRect(
+                    color = SkyBlue,
+                    size = Size(6f, size.height)
+                )
+            } else Modifier)
             .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier),
         colors = CardDefaults.cardColors(
-            containerColor = if (targetHit) MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
-            else MaterialTheme.colorScheme.surface
+            containerColor = MaterialTheme.colorScheme.surface
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -76,12 +97,15 @@ fun StockCard(
                         color = color
                     )
                 }
-                Text(
-                    text = " $arrow",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = color
-                )
+                if (arrow.isNotEmpty()) {
+                    Spacer(modifier = Modifier.padding(start = 2.dp))
+                    Text(
+                        text = " $arrow",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = arrowColor
+                    )
+                }
                 if (showRemove && onRemove != null) {
                     Spacer(modifier = Modifier.padding(start = 4.dp))
                     Text(
@@ -100,7 +124,7 @@ fun StockCard(
                 Text(
                     text = "LTP: ${if (lastLtp != null) "\u09F3${formatBdt(lastLtp)}" else "Awaiting data..."}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (targetHit) ProfitGreen else MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (targetHit) SkyBlue else MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.weight(1f))
                 if (pct != null) {
@@ -108,6 +132,18 @@ fun StockCard(
                         text = "${if (isProfit == true) "+" else ""}${"%.2f".format(kotlin.math.abs(pct))}%",
                         style = MaterialTheme.typography.bodySmall,
                         color = color
+                    )
+                }
+            }
+            if (ycp != null) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "YCP: \u09F3${formatBdt(ycp)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -137,7 +173,7 @@ fun StockCard(
             if (targetHit) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "\u2713 Target Reached",
+                    text = "\u2705 BUY SIGNAL",
                     style = MaterialTheme.typography.labelSmall,
                     color = ProfitGreen,
                     fontWeight = FontWeight.Bold

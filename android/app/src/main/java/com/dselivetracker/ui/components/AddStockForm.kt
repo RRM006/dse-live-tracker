@@ -28,10 +28,10 @@ fun AddStockForm(
     quantity: String,
     onQuantityChange: (String) -> Unit,
     onAdd: () -> Unit,
+    modifier: Modifier = Modifier,
     targetPrice: String? = null,
     onTargetPriceChange: ((String) -> Unit)? = null,
-    buttonText: String = "+ Add to Portfolio",
-    modifier: Modifier = Modifier
+    buttonText: String = "+ Add to Portfolio"
 ) {
     Column(modifier = modifier.padding(12.dp)) {
         Text(

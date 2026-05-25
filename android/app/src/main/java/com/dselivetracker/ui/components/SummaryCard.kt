@@ -115,8 +115,8 @@ fun SummaryCard(
 }
 
 fun formatBdt(value: Double): String {
-    val fixed = "%.2f".format(kotlin.math.abs(value))
-    val parts = fixed.split(".")
-    val intPart = parts[0].reversed().chunked(3).joinToString(",").reversed()
-    return "$intPart.${parts[1]}"
+    val formatter = java.text.NumberFormat.getNumberInstance(java.util.Locale("en", "BD"))
+    formatter.minimumFractionDigits = 2
+    formatter.maximumFractionDigits = 2
+    return formatter.format(kotlin.math.abs(value))
 }

@@ -17,7 +17,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.dselivetracker.ui.theme.LossRed
-import com.dselivetracker.ui.theme.Neutral
 import com.dselivetracker.ui.theme.ProfitGreen
 
 @Composable
@@ -27,11 +26,11 @@ fun StockCard(
     quantity: Int,
     lastLtp: Double?,
     direction: String?,
+    modifier: Modifier = Modifier,
     showRemove: Boolean = false,
     onRemove: (() -> Unit)? = null,
     onClick: (() -> Unit)? = null,
-    targetHit: Boolean = false,
-    modifier: Modifier = Modifier
+    targetHit: Boolean = false
 ) {
     val pnl = if (lastLtp != null) (lastLtp - buyPrice) * quantity else null
     val pct = if (lastLtp != null && buyPrice > 0) ((lastLtp - buyPrice) / buyPrice) * 100 else null
@@ -71,7 +70,7 @@ fun StockCard(
                 )
                 if (buyPrice > 0 && pnl != null) {
                     Text(
-                        text = "${if (isProfit) "+" else ""}\u09F3${formatBdt(pnl)}",
+                        text = "${if (isProfit == true) "+" else ""}\u09F3${formatBdt(pnl)}",
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Bold,
                         color = color

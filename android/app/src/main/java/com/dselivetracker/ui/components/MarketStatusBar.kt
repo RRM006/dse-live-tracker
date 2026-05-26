@@ -4,8 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
@@ -23,20 +21,24 @@ import java.util.Calendar
 
 @Composable
 fun MarketStatusBar(
+    status: String? = null,
     modifier: Modifier = Modifier
 ) {
-    val isOpen = remember {
-        val now = Calendar.getInstance()
-        val day = now.get(Calendar.DAY_OF_WEEK)
-        val hours = now.get(Calendar.HOUR_OF_DAY)
-        val mins = now.get(Calendar.MINUTE)
-        val totalMins = hours * 60 + mins
-
-        if (day >= Calendar.SUNDAY && day <= Calendar.THURSDAY) {
-            val open = 10 * 60
-            val close = 14 * 60 + 30
-            totalMins >= open && totalMins < close
-        } else false
+    val isOpen = if (status != null) {
+        status == "Open"
+    } else {
+        remember {
+            val now = Calendar.getInstance()
+            val day = now.get(Calendar.DAY_OF_WEEK)
+            val hours = now.get(Calendar.HOUR_OF_DAY)
+            val mins = now.get(Calendar.MINUTE)
+            val totalMins = hours * 60 + mins
+            if (day >= Calendar.SUNDAY && day <= Calendar.THURSDAY) {
+                val open = 10 * 60
+                val close = 14 * 60 + 30
+                totalMins >= open && totalMins < close
+            } else false
+        }
     }
 
     Row(
@@ -51,7 +53,7 @@ fun MarketStatusBar(
         )
         Spacer(modifier = Modifier.width(4.dp))
         Text(
-            text = if (isOpen) "Open" else "Closed",
+            text = if (isOpen) "Live" else "Closed",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

@@ -46,6 +46,8 @@ class WatchlistViewModel(application: Application) : AndroidViewModel(applicatio
     private val _ycpMap = MutableStateFlow<Map<String, Double>>(emptyMap())
     val ycpMap: StateFlow<Map<String, Double>> = _ycpMap
 
+    val marketStatus: StateFlow<String?> = stockRepo.marketStatus
+
     private val _snackbarMessage = MutableStateFlow<String?>(null)
     val snackbarMessage: StateFlow<String?> = _snackbarMessage
 

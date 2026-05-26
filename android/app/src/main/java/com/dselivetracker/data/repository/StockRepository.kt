@@ -18,6 +18,9 @@ class StockRepository(private val cacheDao: StockCacheDao) {
     private val _allStocks = MutableStateFlow<Map<String, StockQuoteFull>>(emptyMap())
     val allStocks: StateFlow<Map<String, StockQuoteFull>> = _allStocks
 
+    private val _marketStatus = MutableStateFlow<String?>(null)
+    val marketStatus: StateFlow<String?> = _marketStatus
+
     private var _hasNotified = mutableMapOf<String, Boolean>()
     val hasNotified: Map<String, Boolean> get() = _hasNotified
 
@@ -41,8 +44,13 @@ class StockRepository(private val cacheDao: StockCacheDao) {
     }
 
     suspend fun fetchAndUpdateAll() {
-        val (text1, html2) = DseApiClient.fetchBothSources()
+        val (text1, html2, homepage) = DseApiClient.fetchAllThree()
         val merged = mutableMapOf<String, StockQuoteFull>()
+
+        if (homepage != null) {
+            val parsed = QuotesParser.parseMarketStatus(homepage)
+            if (parsed != null) _marketStatus.value = parsed
+        }
 
         if (html2 != null) {
             val fullData = QuotesParser.parseFullHtml(html2)

@@ -52,6 +52,8 @@ class PortfolioViewModel(application: Application) : AndroidViewModel(applicatio
     private val _quantity = MutableStateFlow("")
     val quantity: StateFlow<String> = _quantity
 
+    val marketStatus: StateFlow<String?> = stockRepo.marketStatus
+
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing
 
@@ -103,7 +105,7 @@ class PortfolioViewModel(application: Application) : AndroidViewModel(applicatio
                     }
                 }
                 val time = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
-                _lastUpdated.value = "Portfolio updated at $time"
+                _lastUpdated.value = time
             } catch (e: Exception) {
                 _lastUpdated.value = "Update failed"
             } finally {

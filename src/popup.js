@@ -5,6 +5,8 @@
   const PROXY_URL = 'https://corsproxy.io/?' + encodeURIComponent(QUOTES_URL);
   const FULL_QUOTES_URL = 'https://www.dsebd.org/latest_share_price_scroll_l.php';
   const FULL_PROXY_URL = 'https://corsproxy.io/?' + encodeURIComponent(FULL_QUOTES_URL);
+  const MARKET_STATUS_URL = 'https://www.dsebd.org/';
+  const MARKET_PROXY_URL = 'https://corsproxy.io/?' + encodeURIComponent(MARKET_STATUS_URL);
   const AUTO_REFRESH_MS = 30000;
   const MAX_RETRIES = 2;
   const RETRY_DELAY = 1500;
@@ -82,6 +84,9 @@
   let stockData = {};
   let acActiveInput = null;
   let notifiedAt = {};
+  let dseDataTimestamp = null;
+  let dseDataDate = null;
+  let marketStatusFromDSE = null;
 
   document.addEventListener('DOMContentLoaded', () => {
     cacheDOM();
@@ -718,9 +723,10 @@
     updateStatus('Refreshing data...');
 
     try {
-      const [text1, html2] = await Promise.all([
+      const [text1, html2, homepage] = await Promise.all([
         fetchWithRetry(QUOTES_URL, PROXY_URL).catch(() => null),
-        fetchWithRetry(FULL_QUOTES_URL, FULL_PROXY_URL).catch(() => null)
+        fetchWithRetry(FULL_QUOTES_URL, FULL_PROXY_URL).catch(() => null),
+        fetchWithRetry(MARKET_STATUS_URL, MARKET_PROXY_URL).catch(() => null)
       ]);
 
       stockData = {};
@@ -729,6 +735,8 @@
         const fullData = parseFullQuotes(html2);
         Object.assign(stockData, fullData);
       }
+
+      if (text1) extractTimestamp(text1);
 
       if (text1) {
         const basicData = parseAllQuotesMap(text1);
@@ -742,6 +750,12 @@
       }
 
       autoCompleteCache = Object.keys(stockData).sort();
+
+      if (homepage) {
+        const parsed = parseMarketStatus(homepage);
+        if (parsed) marketStatusFromDSE = parsed;
+      }
+      updateMarketStatus();
 
       const activeView = document.querySelector('.tab.active').dataset.view;
 
@@ -801,7 +815,9 @@
         }
       }
 
-      updateStatus('Updated at ' + new Date().toLocaleTimeString());
+      const timeStr = new Date().toLocaleTimeString();
+      const dseTime = dseDataTimestamp ? dseDataTimestamp.split(' ')[1] : '';
+      updateStatus(timeStr + (dseTime ? ' \u00B7 DSE: ' + dseTime : ''));
     } catch (err) {
       updateStatus('Update failed');
     } finally {
@@ -948,6 +964,21 @@
       }
     }
     return map;
+  }
+
+  function extractTimestamp(text) {
+    const m = text.match(/Date:\s*(\d{2}-\d{2}-\d{4})\s+Time:\s*(\d{2}:\d{2}:\d{2})/);
+    if (m) {
+      dseDataTimestamp = m[1] + ' ' + m[2];
+      const [dd, mm, yyyy] = m[1].split('-');
+      const [hh, min, ss] = m[2].split(':');
+      dseDataDate = new Date(+yyyy, +mm - 1, +dd, +hh, +min, +ss);
+    }
+  }
+
+  function parseMarketStatus(html) {
+    const m = html.match(/Market Status:\s*<[^>]*>\s*<b>\s*(Open|Closed)\s*<\/b>/i);
+    return m ? m[1] : null;
   }
 
   function parseQuotes(text, searchSymbol) {
@@ -1201,22 +1232,36 @@
   }
 
   function updateMarketStatus() {
-    const now = new Date();
-    const day = now.getDay();
-    const hours = now.getHours();
-    const mins = now.getMinutes();
-    const totalMins = hours * 60 + mins;
-
-    let isOpen = false;
-    if (day >= 0 && day <= 4) {
-      const open = 10 * 60;
-      const close = 14 * 60 + 30;
-      isOpen = totalMins >= open && totalMins < close;
+    if (marketStatusFromDSE) {
+      const isOpen = marketStatusFromDSE === 'Open';
+      dom.marketStatus.innerHTML = `
+        <span class="status-dot ${isOpen ? 'open' : 'closed'}"></span>
+        ${isOpen ? 'Live' : 'Closed'}`;
+      return;
     }
 
+    if (dseDataDate) {
+      const now = new Date();
+      const diffMin = (now - dseDataDate) / 60000;
+      const isLive = diffMin >= 0 && diffMin < 30;
+      if (isLive) {
+        dom.marketStatus.innerHTML = `
+          <span class="status-dot open"></span>
+          Live`;
+        return;
+      }
+    }
+
+    const now = new Date();
+    const day = now.getDay();
+    const totalMins = now.getHours() * 60 + now.getMinutes();
+    let isOpen = false;
+    if (day >= 0 && day <= 4) {
+      isOpen = totalMins >= 600 && totalMins < 870;
+    }
     dom.marketStatus.innerHTML = `
       <span class="status-dot ${isOpen ? 'open' : 'closed'}"></span>
-      ${isOpen ? 'Open' : 'Closed'}`;
+      ${isOpen ? 'Live' : 'Closed'}`;
   }
 
   function toggleDark() {

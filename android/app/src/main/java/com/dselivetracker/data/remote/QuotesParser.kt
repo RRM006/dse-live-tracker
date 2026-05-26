@@ -48,6 +48,11 @@ object QuotesParser {
         return ParsedQuotes(quotes, timestamp)
     }
 
+    fun parseMarketStatus(html: String): String? {
+        val regex = Regex("""Market Status:\s*<[^>]*>\s*<b>\s*(Open|Closed)\s*</b>""", RegexOption.IGNORE_CASE)
+        return regex.find(html)?.groupValues?.get(1)
+    }
+
     fun parseFullHtml(html: String): Map<String, StockQuoteFull> {
         val doc = Jsoup.parse(html)
         val rows = doc.select("table tbody tr")

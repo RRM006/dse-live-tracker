@@ -123,7 +123,7 @@ class HoldingsViewModel(application: Application) : AndroidViewModel(application
                     }
                 }
                 val time = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())
-                _lastUpdated.value = "Holdings updated at $time"
+                _lastUpdated.value = time
             } catch (e: Exception) {
                 _lastUpdated.value = "Update failed"
             } finally {

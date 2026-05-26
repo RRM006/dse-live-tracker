@@ -56,6 +56,7 @@ fun WatchlistScreen(
     val autocompleteSuggestions by viewModel.autocompleteSuggestions.collectAsState()
     val snackbarMessage by viewModel.snackbarMessage.collectAsState()
     val ycpMap by viewModel.ycpMap.collectAsState()
+    val marketStatus by viewModel.marketStatus.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) {
@@ -96,6 +97,7 @@ fun WatchlistScreen(
                         )
                     }
                     MarketStatusBar(
+                        status = marketStatus,
                         modifier = Modifier.padding(end = 12.dp)
                     )
                 },

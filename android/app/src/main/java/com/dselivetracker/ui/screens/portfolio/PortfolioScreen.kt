@@ -48,6 +48,7 @@ fun PortfolioScreen(
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val lastUpdated by viewModel.lastUpdated.collectAsState()
     val error by viewModel.error.collectAsState()
+    val marketStatus by viewModel.marketStatus.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) {
@@ -91,6 +92,7 @@ fun PortfolioScreen(
                         )
                     }
                     MarketStatusBar(
+                        status = marketStatus,
                         modifier = Modifier.padding(end = 12.dp)
                     )
                 },

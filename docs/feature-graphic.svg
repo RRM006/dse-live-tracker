@@ -1,0 +1,31 @@
+<svg width="1024" height="500" viewBox="0 0 1024 500" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0F172A"/>
+      <stop offset="100%" style="stop-color:#1E293B"/>
+    </linearGradient>
+    <linearGradient id="line1" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" style="stop-color:#3B82F6"/>
+      <stop offset="100%" style="stop-color:#60A5FA"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="500" fill="url(#bg)"/>
+  <line x1="0" y1="100" x2="1024" y2="100" stroke="#1E293B" stroke-width="1"/>
+  <line x1="0" y1="200" x2="1024" y2="200" stroke="#1E293B" stroke-width="1"/>
+  <line x1="0" y1="300" x2="1024" y2="300" stroke="#1E293B" stroke-width="1"/>
+  <line x1="0" y1="400" x2="1024" y2="400" stroke="#1E293B" stroke-width="1"/>
+  <polyline points="80,380 200,340 320,360 440,280 560,300 680,200 800,240 920,160 960,150"
+    fill="none" stroke="url(#line1)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <polyline points="80,400 200,370 320,385 440,320 560,340 680,250 800,280 920,210 960,200"
+    fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>
+  <text x="80" y="110" font-family="Arial, Helvetica, sans-serif" font-size="48" font-weight="bold" fill="#FFFFFF">DSE Live Tracker</text>
+  <text x="80" y="155" font-family="Arial, Helvetica, sans-serif" font-size="22" fill="#94A3B8">Track Dhaka Stock Exchange in real-time</text>
+  <rect x="80" y="185" width="120" height="28" rx="14" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+  <text x="140" y="204" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#60A5FA" text-anchor="middle" font-weight="bold">Live Prices</text>
+  <rect x="210" y="185" width="120" height="28" rx="14" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+  <text x="270" y="204" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#4ADE80" text-anchor="middle" font-weight="bold">Buy Alerts</text>
+  <rect x="340" y="185" width="140" height="28" rx="14" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+  <text x="410" y="204" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#FBBF24" text-anchor="middle" font-weight="bold">Portfolio P&amp;L</text>
+  <circle cx="920" cy="460" r="5" fill="#4ADE80"/>
+  <text x="935" y="465" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#94A3B8">Live</text>
+</svg>

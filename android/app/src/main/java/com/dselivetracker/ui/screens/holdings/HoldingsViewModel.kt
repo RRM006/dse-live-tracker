@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.dselivetracker.DseApp
 import com.dselivetracker.data.local.entity.PortfolioStock
+import com.dselivetracker.data.remote.QuotesParser.StockQuoteFull
 import com.dselivetracker.data.repository.PortfolioRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -27,7 +28,7 @@ enum class SortMode(val label: String) {
 class HoldingsViewModel(application: Application) : AndroidViewModel(application) {
     private val app = application as DseApp
     private val db = app.database
-    private val portfolioRepo = PortfolioRepository(db.portfolioDao())
+    private val portfolioRepo = PortfolioRepository(db.portfolioDao(), db.tradeHistoryDao())
     private val stockRepo = app.stockRepository
 
     private val _sortMode = MutableStateFlow(SortMode.PNL_ASC)
@@ -60,16 +61,50 @@ class HoldingsViewModel(application: Application) : AndroidViewModel(application
     private val _ycpMap = MutableStateFlow<Map<String, Double>>(emptyMap())
     val ycpMap: StateFlow<Map<String, Double>> = _ycpMap
 
+    private val _stockQuotes = MutableStateFlow<Map<String, StockQuoteFull>>(emptyMap())
+    val stockQuotes: StateFlow<Map<String, StockQuoteFull>> = _stockQuotes
+
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing
 
     private val _lastUpdated = MutableStateFlow<String?>(null)
     val lastUpdated: StateFlow<String?> = _lastUpdated
 
+    private val _sellStockId = MutableStateFlow<Long?>(null)
+    val sellStockId: StateFlow<Long?> = _sellStockId
+
+    private val _sellPrice = MutableStateFlow("")
+    val sellPrice: StateFlow<String> = _sellPrice
+
+    fun showSellDialog(id: Long) {
+        _sellStockId.value = id
+        _sellPrice.value = ""
+    }
+
+    fun hideSellDialog() {
+        _sellStockId.value = null
+        _sellPrice.value = ""
+    }
+
+    fun updateSellPrice(value: String) {
+        _sellPrice.value = value
+    }
+
+    fun confirmSell() {
+        val id = _sellStockId.value ?: return
+        val price = _sellPrice.value.toDoubleOrNull() ?: return
+        viewModelScope.launch {
+            portfolioRepo.sellStock(id, price)
+            _sellStockId.value = null
+            _sellPrice.value = ""
+        }
+    }
+
     init {
         viewModelScope.launch {
             stockRepo.allStocks.collect { stocks ->
                 _ycpMap.value = stocks.mapValues { it.value.ycp }
+                _stockQuotes.value = stocks
             }
         }
     }

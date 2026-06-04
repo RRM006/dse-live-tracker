@@ -21,9 +21,9 @@ android {
     defaultConfig {
         applicationId = "com.dselivetracker"
         minSdk = 26
-        targetSdk = 34
-        versionCode = 1
-        versionName = "1.0.0"
+        targetSdk = 35
+        versionCode = 3
+        versionName = "1.0.2"
     }
 
     signingConfigs {
@@ -40,8 +40,9 @@ android {
 
     buildTypes {
         debug {
-            isMinifyEnabled = true
-            isShrinkResources = true
+            isMinifyEnabled = false
+            isShrinkResources = false
+            applicationIdSuffix = ".debug"
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
         release {

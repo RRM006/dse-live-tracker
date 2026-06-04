@@ -23,8 +23,8 @@ class WatchlistRepository(private val dao: WatchlistDao) {
 
     suspend fun getBySymbol(symbol: String) = dao.getBySymbol(symbol)
 
-    suspend fun updatePrice(symbol: String, ltp: Double, direction: String?) {
-        dao.updatePrice(symbol, ltp, direction, System.currentTimeMillis())
+    suspend fun updatePrice(symbol: String, ltp: Double, high: Double?, low: Double?, direction: String?) {
+        dao.updatePrice(symbol, ltp, high, low, direction, System.currentTimeMillis())
     }
 
     suspend fun updateTargetPrice(id: Long, targetPrice: Double?) {

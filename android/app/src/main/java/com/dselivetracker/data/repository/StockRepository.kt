@@ -3,6 +3,7 @@ package com.dselivetracker.data.repository
 import com.dselivetracker.data.local.dao.StockCacheDao
 import com.dselivetracker.data.local.entity.StockCacheEntity
 import com.dselivetracker.data.remote.DseApiClient
+import com.dselivetracker.data.remote.NewsParser
 import com.dselivetracker.data.remote.QuotesParser
 import com.dselivetracker.data.remote.QuotesParser.StockQuoteFull
 import kotlinx.coroutines.CoroutineScope
@@ -20,6 +21,9 @@ class StockRepository(private val cacheDao: StockCacheDao) {
 
     private val _marketStatus = MutableStateFlow<String?>(null)
     val marketStatus: StateFlow<String?> = _marketStatus
+
+    private val _allNews = MutableStateFlow<List<NewsParser.NewsItem>>(emptyList())
+    val allNews: StateFlow<List<NewsParser.NewsItem>> = _allNews
 
     private var _hasNotified = mutableMapOf<String, Boolean>()
     val hasNotified: Map<String, Boolean> get() = _hasNotified
@@ -50,6 +54,8 @@ class StockRepository(private val cacheDao: StockCacheDao) {
         if (homepage != null) {
             val parsed = QuotesParser.parseMarketStatus(homepage)
             if (parsed != null) _marketStatus.value = parsed
+            val news = NewsParser.parseNews(homepage)
+            if (news.isNotEmpty()) _allNews.value = news
         }
 
         if (html2 != null) {

@@ -1,13 +1,17 @@
 package com.dselivetracker.ui.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -15,16 +19,15 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.dselivetracker.ui.theme.LossRed
 import com.dselivetracker.ui.theme.ProfitGreen
 import com.dselivetracker.ui.theme.TextMuted
+import com.dselivetracker.utils.StockUtils
 
-val SkyBlue = Color(0xFF00BFFF)
+val BuySignalGreen = Color(0xFF1B5E20)
 val DirectionUp = Color(0xFF4CAF50)
 val DirectionDown = Color(0xFFF44336)
 
@@ -38,9 +41,13 @@ fun StockCard(
     modifier: Modifier = Modifier,
     showRemove: Boolean = false,
     onRemove: (() -> Unit)? = null,
+    showSell: Boolean = false,
+    onSell: (() -> Unit)? = null,
     onClick: (() -> Unit)? = null,
     targetHit: Boolean = false,
-    ycp: Double? = null
+    ycp: Double? = null,
+    high: Double? = null,
+    low: Double? = null
 ) {
     val pnl = if (lastLtp != null) (lastLtp - buyPrice) * quantity else null
     val pct = if (lastLtp != null && buyPrice > 0) ((lastLtp - buyPrice) / buyPrice) * 100 else null
@@ -66,15 +73,17 @@ fun StockCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .then(if (targetHit) Modifier.drawBehind {
-                drawRect(
-                    color = SkyBlue,
-                    size = Size(6f, size.height)
-                )
-            } else Modifier)
+            .then(
+                if (targetHit) Modifier.background(
+                    BuySignalGreen.copy(alpha = 0.15f),
+                    shape = RoundedCornerShape(12.dp)
+                ) else Modifier
+            )
             .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = if (targetHit)
+                BuySignalGreen.copy(alpha = 0.15f)
+            else MaterialTheme.colorScheme.surface
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -83,12 +92,22 @@ fun StockCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = symbol,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f)
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = symbol,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    val stockName = StockUtils.getStockName(symbol)
+                    if (stockName != symbol) {
+                        Text(
+                            text = stockName,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1
+                        )
+                    }
+                }
                 if (buyPrice > 0 && pnl != null) {
                     Text(
                         text = "${if (isProfit == true) "+" else ""}\u09F3${formatBdt(pnl)}",
@@ -105,6 +124,19 @@ fun StockCard(
                         fontWeight = FontWeight.Bold,
                         color = arrowColor
                     )
+                }
+                if (showSell && onSell != null) {
+                    Spacer(modifier = Modifier.padding(start = 4.dp))
+                    Button(
+                        onClick = onSell,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error
+                        ),
+                        modifier = Modifier.height(28.dp),
+                        contentPadding = ButtonDefaults.TextButtonContentPadding
+                    ) {
+                        Text("Sell", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onError)
+                    }
                 }
                 if (showRemove && onRemove != null) {
                     Spacer(modifier = Modifier.padding(start = 4.dp))
@@ -124,7 +156,7 @@ fun StockCard(
                 Text(
                     text = "LTP: ${if (lastLtp != null) "\u09F3${formatBdt(lastLtp)}" else "Awaiting data..."}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (targetHit) SkyBlue else MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (targetHit) ProfitGreen else MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.weight(1f))
                 if (pct != null) {
@@ -135,17 +167,34 @@ fun StockCard(
                     )
                 }
             }
-            if (ycp != null) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (high != null) {
                     Text(
-                        text = "YCP: \u09F3${formatBdt(ycp)}",
+                        text = "H: \u09F3${formatBdt(high)}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+                if (high != null && low != null) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+                if (low != null) {
+                    Text(
+                        text = "L: \u09F3${formatBdt(low)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            if (ycp != null) {
+                Text(
+                    text = "YCP: \u09F3${formatBdt(ycp)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
             if (buyPrice > 0) {
                 Spacer(modifier = Modifier.height(6.dp))

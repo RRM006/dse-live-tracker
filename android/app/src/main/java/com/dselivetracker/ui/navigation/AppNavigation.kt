@@ -3,10 +3,12 @@ package com.dselivetracker.ui.navigation
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.filled.Article
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Wallet
 import androidx.compose.material.icons.outlined.AccountBalance
+import androidx.compose.material.icons.outlined.Article
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material.icons.outlined.Wallet
@@ -28,6 +30,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.dselivetracker.ui.screens.holdings.HoldingsScreen
+import com.dselivetracker.ui.screens.news.NewsScreen
 import com.dselivetracker.ui.screens.portfolio.PortfolioScreen
 import com.dselivetracker.ui.screens.search.SearchScreen
 import com.dselivetracker.ui.screens.watchlist.WatchlistScreen
@@ -47,9 +50,10 @@ sealed class Screen(
             return "search?s=$symbol&b=$buyPrice&q=$quantity"
         }
     }
+    data object News : Screen("news", "News", Icons.Filled.Article, Icons.Outlined.Article)
 }
 
-val bottomNavScreens = listOf(Screen.Portfolio, Screen.Holdings, Screen.Watchlist, Screen.Search)
+val bottomNavScreens = listOf(Screen.Portfolio, Screen.Holdings, Screen.Watchlist, Screen.Search, Screen.News)
 
 @Composable
 fun DseNavHost() {
@@ -113,6 +117,9 @@ fun DseNavHost() {
             }
             composable(Screen.Watchlist.route) {
                 WatchlistScreen()
+            }
+            composable(Screen.News.route) {
+                NewsScreen()
             }
             composable(
                 route = Screen.Search.ROUTE_PATTERN,

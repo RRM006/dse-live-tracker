@@ -12,6 +12,7 @@ import androidx.lifecycle.viewModelScope
 import com.dselivetracker.DseApp
 import com.dselivetracker.data.local.entity.WatchlistStock
 import com.dselivetracker.data.repository.WatchlistRepository
+import com.dselivetracker.utils.StockUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -64,16 +65,28 @@ class WatchlistViewModel(application: Application) : AndroidViewModel(applicatio
         val query = value.uppercase()
         if (query.length >= 1) {
             val allSymbols = stockRepo.allStocks.value.keys.toList()
-            val startsWith = allSymbols.filter { it.startsWith(query) }
-            val contains = allSymbols.filter { it.contains(query) && !it.startsWith(query) }
-            _autocompleteSuggestions.value = (startsWith + contains).take(8)
+            val matches = allSymbols.filter { sym ->
+                sym.contains(query) || StockUtils.getStockName(sym).uppercase().contains(query)
+            }.sortedBy { sym ->
+                val name = StockUtils.getStockName(sym).uppercase()
+                when {
+                    sym.startsWith(query) -> 0
+                    name.startsWith(query) -> 1
+                    else -> 2
+                }
+            }
+            _autocompleteSuggestions.value = matches.take(8).map { sym ->
+                val name = StockUtils.getStockName(sym)
+                if (name != sym) "$sym - $name" else sym
+            }
         } else {
             _autocompleteSuggestions.value = emptyList()
         }
     }
 
-    fun selectSymbol(value: String) {
-        _symbol.value = value
+    fun selectSymbol(suggestion: String) {
+        val sym = suggestion.split(" - ")[0]
+        _symbol.value = sym
         _autocompleteSuggestions.value = emptyList()
     }
 
@@ -119,7 +132,7 @@ class WatchlistViewModel(application: Application) : AndroidViewModel(applicatio
                             info.ltp < stock.lastLtp -> "down"
                             else -> "flat"
                         }
-                        watchlistRepo.updatePrice(stock.symbol, info.ltp, direction)
+                        watchlistRepo.updatePrice(stock.symbol, info.ltp, info.high, info.low, direction)
                         checkBuySignal(stock.symbol, info)
                     }
                 }

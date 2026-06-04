@@ -32,6 +32,6 @@ interface WatchlistDao {
     @Query("SELECT * FROM watchlist_stocks WHERE symbol = :symbol LIMIT 1")
     suspend fun getBySymbol(symbol: String): WatchlistStock?
 
-    @Query("UPDATE watchlist_stocks SET lastLtp = :ltp, prevLtp = lastLtp, direction = :direction, lastUpdated = :timestamp WHERE symbol = :symbol")
-    suspend fun updatePrice(symbol: String, ltp: Double, direction: String?, timestamp: Long)
+    @Query("UPDATE watchlist_stocks SET lastLtp = :ltp, prevLtp = lastLtp, direction = :direction, high = COALESCE(:high, high), low = COALESCE(:low, low), lastUpdated = :timestamp WHERE symbol = :symbol")
+    suspend fun updatePrice(symbol: String, ltp: Double, high: Double?, low: Double?, direction: String?, timestamp: Long)
 }

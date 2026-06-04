@@ -11,5 +11,7 @@ data class WatchlistStock(
     val lastLtp: Double? = null,
     val prevLtp: Double? = null,
     val direction: String? = null,
+    val high: Double? = null,
+    val low: Double? = null,
     val lastUpdated: Long? = null
 )

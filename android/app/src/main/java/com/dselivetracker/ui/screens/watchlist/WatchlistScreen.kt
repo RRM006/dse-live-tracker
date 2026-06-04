@@ -37,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.dselivetracker.ui.components.MarketStatusBar
 import com.dselivetracker.ui.components.StockCard
@@ -143,7 +144,9 @@ fun WatchlistScreen(
                             showRemove = true,
                             onRemove = { viewModel.removeStock(stock.id) },
                             targetHit = targetHit,
-                            ycp = ycpMap[stock.symbol]
+                            ycp = ycpMap[stock.symbol],
+                            high = stock.high,
+                            low = stock.low
                         )
                     }
                     item { Spacer(modifier = Modifier.height(8.dp)) }
@@ -175,7 +178,8 @@ fun WatchlistScreen(
                         DropdownMenu(
                             expanded = true,
                             onDismissRequest = { viewModel.hideAutocomplete() },
-                            modifier = Modifier.fillMaxWidth(0.9f)
+                            modifier = Modifier.fillMaxWidth(0.9f),
+                            properties = PopupProperties(focusable = false)
                         ) {
                             autocompleteSuggestions.forEach { suggestion ->
                                 DropdownMenuItem(

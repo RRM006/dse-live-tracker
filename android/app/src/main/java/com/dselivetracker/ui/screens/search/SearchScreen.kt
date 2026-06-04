@@ -44,6 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.dselivetracker.ui.components.formatBdt
 import com.dselivetracker.ui.theme.DarkHeader
@@ -141,7 +142,8 @@ fun SearchScreen(
                         DropdownMenu(
                             expanded = true,
                             onDismissRequest = { viewModel.hideAutocomplete() },
-                            modifier = Modifier.fillMaxWidth(0.9f)
+                            modifier = Modifier.fillMaxWidth(0.9f),
+                            properties = PopupProperties(focusable = false)
                         ) {
                             autocompleteSuggestions.forEach { suggestion ->
                                 DropdownMenuItem(

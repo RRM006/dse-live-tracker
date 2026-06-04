@@ -20,25 +20,32 @@ import java.util.Locale
 class PortfolioViewModel(application: Application) : AndroidViewModel(application) {
     private val app = application as DseApp
     private val db = app.database
-    private val portfolioRepo = PortfolioRepository(db.portfolioDao())
+    private val portfolioRepo = PortfolioRepository(db.portfolioDao(), db.tradeHistoryDao())
     private val stockRepo = app.stockRepository
 
     private val stocks = portfolioRepo.getAllStocks()
+    private val realizedPnl = portfolioRepo.getRealizedPnl()
 
-    val summary: StateFlow<PortfolioSummary?> = stocks.combine(MutableStateFlow(Unit)) { list, _ ->
+    val summary: StateFlow<PortfolioSummary?> = stocks.combine(realizedPnl) { list, realized ->
         if (list.isEmpty()) null
         else {
+            val totalCommission = list.sumOf { it.commission }
             val invested = list.sumOf { it.buyPrice * it.quantity }
             val current = list.filter { it.lastLtp != null }.sumOf { it.lastLtp!! * it.quantity }
-            val pnl = current - invested
-            val pct = if (invested > 0) (pnl / invested) * 100 else 0.0
+            val unrealizedPnl = current - invested - totalCommission
+            val totalPnl = unrealizedPnl + realized
+            val totalInvested = if (invested > 0) invested else 1.0
+            val totalPct = (totalPnl / totalInvested) * 100
             PortfolioSummary(
                 invested = invested,
                 currentValue = current,
-                pnl = pnl,
-                pnlPercent = pct,
+                pnl = totalPnl,
+                pnlPercent = totalPct,
                 stockCount = list.size,
-                countWithData = list.count { it.lastLtp != null }
+                countWithData = list.count { it.lastLtp != null },
+                realizedPnl = realized,
+                unrealizedPnl = unrealizedPnl,
+                totalCommission = totalCommission
             )
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)

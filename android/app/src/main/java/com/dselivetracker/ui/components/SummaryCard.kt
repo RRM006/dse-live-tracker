@@ -24,7 +24,10 @@ data class PortfolioSummary(
     val pnl: Double,
     val pnlPercent: Double,
     val stockCount: Int,
-    val countWithData: Int
+    val countWithData: Int,
+    val realizedPnl: Double = 0.0,
+    val unrealizedPnl: Double = 0.0,
+    val totalCommission: Double = 0.0
 )
 
 @Composable
@@ -35,6 +38,9 @@ fun SummaryCard(
     val isProfit = summary.pnl >= 0
     val sign = if (isProfit) "+" else "-"
     val color = if (isProfit) ProfitGreen else LossRed
+
+    val realizedIsProfit = summary.realizedPnl >= 0
+    val unrealizedIsProfit = summary.unrealizedPnl >= 0
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -90,11 +96,73 @@ fun SummaryCard(
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(4.dp))
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Unrealized P/L",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                val uSign = if (unrealizedIsProfit) "+" else "-"
+                Text(
+                    text = "$uSign৳${formatBdt(kotlin.math.abs(summary.unrealizedPnl))}",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (unrealizedIsProfit) ProfitGreen else LossRed
+                )
+            }
+
+            if (summary.realizedPnl != 0.0) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Realized P/L",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    val rSign = if (realizedIsProfit) "+" else "-"
+                    Text(
+                        text = "$rSign৳${formatBdt(kotlin.math.abs(summary.realizedPnl))}",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (realizedIsProfit) ProfitGreen else LossRed
+                    )
+                }
+            }
+
+            if (summary.totalCommission > 0) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Commission",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    Text(
+                        text = "৳${formatBdt(summary.totalCommission)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(

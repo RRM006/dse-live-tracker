@@ -60,4 +60,6 @@ class PortfolioRepository(private val dao: PortfolioDao, private val tradeDao: T
     suspend fun getRealizedPnlOnce(): Double = tradeDao.getRealizedPnlOnce()
 
     fun getAllTrades(): Flow<List<SoldStock>> = tradeDao.getAllTrades()
+
+    suspend fun getTotalTradeCommissionOnce(): Double = tradeDao.getTotalTradeCommissionOnce()
 }

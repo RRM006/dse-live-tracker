@@ -22,4 +22,7 @@ interface TradeHistoryDao {
 
     @Query("SELECT COALESCE(SUM(realizedPnl), 0) FROM trade_history")
     suspend fun getRealizedPnlOnce(): Double
+
+    @Query("SELECT COALESCE(SUM(buyCommission + sellCommission), 0) FROM trade_history")
+    suspend fun getTotalTradeCommissionOnce(): Double
 }

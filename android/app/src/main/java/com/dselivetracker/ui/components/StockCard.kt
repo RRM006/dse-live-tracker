@@ -45,6 +45,7 @@ fun StockCard(
     onSell: (() -> Unit)? = null,
     onClick: (() -> Unit)? = null,
     targetHit: Boolean = false,
+    targetPrice: Double? = null,
     ycp: Double? = null,
     high: Double? = null,
     low: Double? = null
@@ -218,6 +219,14 @@ fun StockCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+            }
+            if (targetPrice != null) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Target: \u09F3${formatBdt(targetPrice)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
             if (targetHit) {
                 Spacer(modifier = Modifier.height(4.dp))

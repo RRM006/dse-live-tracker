@@ -54,6 +54,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 @Composable
 fun HoldingsScreen(
     onNavigateToSearch: (String, String, String) -> Unit = { _, _, _ -> },
+    onNavigateToTradeHistory: () -> Unit = {},
     viewModel: HoldingsViewModel = viewModel()
 ) {
     val sortedStocks by viewModel.sortedStocks.collectAsState()
@@ -89,9 +90,9 @@ fun HoldingsScreen(
                         val estValue = sellPrice.toDoubleOrNull()?.times(stock.quantity) ?: 0.0
                         val estCommission = estValue * 0.0004
                         val buyCommission = stock.commission
-                        val estPnl = if (sellPrice.toDoubleOrNull() != null)
-                            (sellPrice.toDoubleOrNull()!! - stock.buyPrice) * stock.quantity - buyCommission - estCommission
-                        else null
+                        val estPnl = sellPrice.toDoubleOrNull()?.let { price ->
+                            (price - stock.buyPrice) * stock.quantity - buyCommission - estCommission
+                        }
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = "Est. value: ৳${com.dselivetracker.ui.components.formatBdt(estValue)}",
@@ -225,6 +226,17 @@ fun HoldingsScreen(
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                Spacer(modifier = Modifier.width(8.dp))
+                Button(
+                    onClick = onNavigateToTradeHistory,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    ),
+                    modifier = Modifier.height(32.dp),
+                    contentPadding = ButtonDefaults.TextButtonContentPadding
+                ) {
+                    Text("History", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimary)
+                }
             }
 
             if (sortedStocks.isEmpty()) {

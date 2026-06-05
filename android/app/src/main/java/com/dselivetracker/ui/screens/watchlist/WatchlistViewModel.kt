@@ -16,6 +16,7 @@ import com.dselivetracker.utils.StockUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import com.dselivetracker.data.remote.QuotesParser.StockQuoteFull
@@ -28,6 +29,15 @@ class WatchlistViewModel(application: Application) : AndroidViewModel(applicatio
 
     val watchlistStocks: StateFlow<List<WatchlistStock>> = watchlistRepo.getAllStocks()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val bestToBuy: StateFlow<List<WatchlistStock>> = watchlistStocks.map { list ->
+        list.filter { it.lastLtp != null && it.targetPrice != null && it.lastLtp <= it.targetPrice }
+            .sortedByDescending { stock ->
+                val tp = stock.targetPrice ?: return@sortedByDescending 0.0
+                val ltp = stock.lastLtp ?: return@sortedByDescending 0.0
+                if (tp > 0) (tp - ltp) / tp else 0.0
+            }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _symbol = MutableStateFlow("")
     val symbol: StateFlow<String> = _symbol
@@ -51,6 +61,9 @@ class WatchlistViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val _snackbarMessage = MutableStateFlow<String?>(null)
     val snackbarMessage: StateFlow<String?> = _snackbarMessage
+
+    private val _alertBanner = MutableStateFlow<String?>(null)
+    val alertBanner: StateFlow<String?> = _alertBanner
 
     init {
         viewModelScope.launch {
@@ -147,14 +160,20 @@ class WatchlistViewModel(application: Application) : AndroidViewModel(applicatio
         val target = watchlistRepo.getAllStocksOnce().find { it.symbol == symbol }?.targetPrice ?: return
         if (info.ltp <= target) {
             val wasNotified = stockRepo.hasNotified[symbol] == true
+            _alertBanner.value = "\uD83D\uDFE6 Buy Signal: $symbol \u2014 LTP \u09F3${info.ltp} reached your target \u09F3$target"
             if (!wasNotified) {
                 stockRepo.markNotified(symbol)
-                _snackbarMessage.value = "\uD83D\uDFE6 Buy Signal: $symbol \u2014 LTP \u09F3${info.ltp} reached your target \u09F3$target"
+                _snackbarMessage.value = _alertBanner.value
                 sendNotification(symbol, info.ltp, target)
             }
         } else {
             stockRepo.resetNotifiedFlag(symbol)
+            _alertBanner.value = null
         }
+    }
+
+    fun clearAlertBanner() {
+        _alertBanner.value = null
     }
 
     private fun sendNotification(symbol: String, ltp: Double, target: Double) {

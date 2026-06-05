@@ -1,8 +1,12 @@
 package com.dselivetracker.ui.screens.watchlist
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -10,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
@@ -39,9 +44,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.dselivetracker.ui.components.BuySignalGreen
 import com.dselivetracker.ui.components.MarketStatusBar
 import com.dselivetracker.ui.components.StockCard
 import com.dselivetracker.ui.theme.DarkHeader
+import com.dselivetracker.ui.theme.ProfitGreen
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -50,12 +57,14 @@ fun WatchlistScreen(
     viewModel: WatchlistViewModel = viewModel()
 ) {
     val watchlistStocks by viewModel.watchlistStocks.collectAsState()
+    val bestToBuy by viewModel.bestToBuy.collectAsState()
     val symbol by viewModel.symbol.collectAsState()
     val targetPrice by viewModel.targetPrice.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val error by viewModel.error.collectAsState()
     val autocompleteSuggestions by viewModel.autocompleteSuggestions.collectAsState()
     val snackbarMessage by viewModel.snackbarMessage.collectAsState()
+    val alertBanner by viewModel.alertBanner.collectAsState()
     val ycpMap by viewModel.ycpMap.collectAsState()
     val marketStatus by viewModel.marketStatus.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -69,8 +78,8 @@ fun WatchlistScreen(
     }
 
     LaunchedEffect(snackbarMessage) {
-        if (snackbarMessage != null) {
-            snackbarHostState.showSnackbar(snackbarMessage!!)
+        snackbarMessage?.let { 
+            snackbarHostState.showSnackbar(it)
             viewModel.clearSnackbar()
         }
     }
@@ -107,6 +116,23 @@ fun WatchlistScreen(
                 )
             )
 
+            AnimatedVisibility(visible = alertBanner != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(ProfitGreen.copy(alpha = 0.15f))
+                        .padding(horizontal = 16.dp, vertical = 10.dp)
+                        .clickable { viewModel.clearAlertBanner() }
+                ) {
+                    Text(
+                        text = alertBanner ?: "",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = ProfitGreen
+                    )
+                }
+            }
+
             if (watchlistStocks.isEmpty()) {
                 Column(
                     modifier = Modifier
@@ -132,9 +158,49 @@ fun WatchlistScreen(
                         .padding(horizontal = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    if (bestToBuy.isNotEmpty()) {
+                        item {
+                            Text(
+                                text = "\u2B50 Best to Buy",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = ProfitGreen,
+                                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                            )
+                        }
+                        items(bestToBuy, key = { it.id }) { stock ->
+                            StockCard(
+                                symbol = stock.symbol,
+                                buyPrice = 0.0,
+                                quantity = 1,
+                                lastLtp = stock.lastLtp,
+                                direction = stock.direction,
+                                showRemove = true,
+                                onRemove = { viewModel.removeStock(stock.id) },
+                                targetHit = true,
+                                targetPrice = stock.targetPrice,
+                                ycp = ycpMap[stock.symbol],
+                                high = stock.high,
+                                low = stock.low
+                            )
+                        }
+                        item {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "\u2014 All Watchlist Items \u2014",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                        }
+                    }
                     items(watchlistStocks, key = { it.id }) { stock ->
-                        val targetHit = stock.targetPrice != null && stock.lastLtp != null &&
-                                stock.lastLtp <= stock.targetPrice!!
+                        val targetHit = stock.targetPrice?.let { target ->
+                            stock.lastLtp?.let { ltp -> ltp <= target }
+                        } ?: false
                         StockCard(
                             symbol = stock.symbol,
                             buyPrice = 0.0,
@@ -144,6 +210,7 @@ fun WatchlistScreen(
                             showRemove = true,
                             onRemove = { viewModel.removeStock(stock.id) },
                             targetHit = targetHit,
+                            targetPrice = stock.targetPrice,
                             ycp = ycpMap[stock.symbol],
                             high = stock.high,
                             low = stock.low
@@ -154,9 +221,9 @@ fun WatchlistScreen(
             }
 
             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                if (error != null) {
+                error?.let { 
                     Text(
-                        text = error!!,
+                        text = it,
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodyMedium
                     )

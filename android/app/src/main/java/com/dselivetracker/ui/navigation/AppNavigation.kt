@@ -33,6 +33,7 @@ import com.dselivetracker.ui.screens.holdings.HoldingsScreen
 import com.dselivetracker.ui.screens.news.NewsScreen
 import com.dselivetracker.ui.screens.portfolio.PortfolioScreen
 import com.dselivetracker.ui.screens.search.SearchScreen
+import com.dselivetracker.ui.screens.tradehistory.TradeHistoryScreen
 import com.dselivetracker.ui.screens.watchlist.WatchlistScreen
 
 sealed class Screen(
@@ -51,6 +52,7 @@ sealed class Screen(
         }
     }
     data object News : Screen("news", "News", Icons.Filled.Article, Icons.Outlined.Article)
+    data object TradeHistory : Screen("trade_history", "Trade History", Icons.Filled.AccountBalance, Icons.Outlined.AccountBalance)
 }
 
 val bottomNavScreens = listOf(Screen.Portfolio, Screen.Holdings, Screen.Watchlist, Screen.Search, Screen.News)
@@ -112,7 +114,15 @@ fun DseNavHost() {
                 HoldingsScreen(
                     onNavigateToSearch = { symbol, buyPrice, qty ->
                         navController.navigate(Screen.Search.createRoute(symbol, buyPrice, qty))
+                    },
+                    onNavigateToTradeHistory = {
+                        navController.navigate(Screen.TradeHistory.route)
                     }
+                )
+            }
+            composable(Screen.TradeHistory.route) {
+                TradeHistoryScreen(
+                    onBack = { navController.popBackStack() }
                 )
             }
             composable(Screen.Watchlist.route) {

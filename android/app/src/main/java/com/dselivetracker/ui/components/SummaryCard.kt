@@ -27,7 +27,8 @@ data class PortfolioSummary(
     val countWithData: Int,
     val realizedPnl: Double = 0.0,
     val unrealizedPnl: Double = 0.0,
-    val totalCommission: Double = 0.0
+    val totalCommission: Double = 0.0,
+    val pieSlices: List<PieSlice> = emptyList()
 )
 
 @Composable

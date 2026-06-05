@@ -82,11 +82,11 @@ fun SearchScreen(
     }
 
     LaunchedEffect(lastUpdated) {
-        if (lastUpdated != null) {
-            val message = if (lastUpdated!!.startsWith("Refresh failed"))
+        lastUpdated?.let { text ->
+            val message = if (text.startsWith("Refresh failed"))
                 "Refresh failed \u2014 showing cached data"
             else
-                lastUpdated!!
+                text
             snackbarHostState.showSnackbar(message)
         }
     }
@@ -202,9 +202,9 @@ fun SearchScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                if (error != null) {
+                error?.let { 
                     Text(
-                        text = error!!,
+                        text = it,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.error,
                         modifier = Modifier
@@ -217,8 +217,7 @@ fun SearchScreen(
                     )
                 }
 
-                if (result != null) {
-                    val r = result!!
+                result?.let { r ->
                     val isProfit = r.totalPnl >= 0
                     val sign = if (isProfit) "+" else "-"
                     val color = if (isProfit) ProfitGreen else LossRed

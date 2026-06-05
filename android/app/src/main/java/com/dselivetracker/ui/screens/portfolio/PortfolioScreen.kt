@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.dselivetracker.ui.components.AddStockForm
 import com.dselivetracker.ui.components.MarketStatusBar
+import com.dselivetracker.ui.components.PieChart
 import com.dselivetracker.ui.components.SummaryCard
 import com.dselivetracker.ui.theme.DarkHeader
 import kotlinx.coroutines.delay
@@ -110,6 +111,10 @@ fun PortfolioScreen(
                 if (summary != null) {
                     Spacer(modifier = Modifier.height(12.dp))
                     SummaryCard(summary = summary!!)
+                    if (summary!!.pieSlices.size >= 2) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        PieChart(slices = summary!!.pieSlices)
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))

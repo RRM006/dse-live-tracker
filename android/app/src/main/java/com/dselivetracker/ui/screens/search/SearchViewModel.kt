@@ -27,7 +27,7 @@ data class SearchResult(
 class SearchViewModel(application: Application) : AndroidViewModel(application) {
     private val app = application as DseApp
     private val db = app.database
-    private val portfolioRepo = PortfolioRepository(db.portfolioDao())
+    private val portfolioRepo = PortfolioRepository(db.portfolioDao(), db.tradeHistoryDao())
     private val stockRepo = app.stockRepository
 
     private val _symbol = MutableStateFlow("")

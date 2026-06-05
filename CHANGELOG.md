@@ -1,5 +1,39 @@
 # Changelog — DSE Live Tracker
 
+## Feature: Commission Fix + Pie Chart + Watchlist Best-to-Buy + Price Alert Banner + Trade History
+
+### Commission Fix
+- `ui/screens/portfolio/PortfolioViewModel.kt`
+  - **Invested** now includes buy commission: `sumOf(buyPrice × quantity + commission)`
+  - **Total commission** includes both buy commissions from held stocks AND buy+sell commissions from sold stocks (via `getAllTrades()` flow combined into summary)
+  - `unrealizedPnl` no longer double-subtracts commission (commission is already baked into invested)
+
+### Pie Chart (Portfolio)
+- **New:** `ui/components/PieChart.kt` — Canvas-based donut chart with arc segments, percentage labels inside arcs, center hole, color legend below
+- `ui/components/SummaryCard.kt` — Added `pieSlices: List<PieSlice>` to `PortfolioSummary`
+- `ui/screens/portfolio/PortfolioViewModel.kt` — Computes `pieSlices` from current‑value breakdown per stock
+- `ui/screens/portfolio/PortfolioScreen.kt` — Shows `PieChart` below `SummaryCard` when ≥2 holdings have data
+
+### Watchlist: Best to Buy + Target Price Display
+- `ui/screens/watchlist/WatchlistViewModel.kt`
+  - Added `bestToBuy: StateFlow<List<WatchlistStock>>` — filters where LTP ≤ target price, sorted by discount % descending `(target-LTP)/target`
+- `ui/screens/watchlist/WatchlistScreen.kt` — "⭐ Best to Buy" section at top of LazyColumn before the rest of the list; separator "— All Watchlist Items —"
+- `ui/components/StockCard.kt` — Added `targetPrice: Double?` parameter; shows "Target: ৳X" row
+
+### Price Alert Banner (Persistent)
+- `ui/screens/watchlist/WatchlistViewModel.kt` — Added `alertBanner: StateFlow<String?>`; set by `checkBuySignal()`, cleared by `clearAlertBanner()`
+- `ui/screens/watchlist/WatchlistScreen.kt` — Green `AnimatedVisibility` banner at top, clickable to dismiss
+
+### Trade History Screen
+- **New:** `ui/screens/tradehistory/TradeHistoryViewModel.kt` — Exposes `trades: Flow<List<SoldStock>>`
+- **New:** `ui/screens/tradehistory/TradeHistoryScreen.kt` — Full screen with:
+  - Back navigation, LazyColumn of `TradeCard` items (symbol, date, buy/sell prices, qty, commissions, P&L)
+  - Total realized P&L footer card
+- `ui/navigation/AppNavigation.kt` — Added `Screen.TradeHistory` route and composable block
+- `ui/screens/holdings/HoldingsScreen.kt` — Added `onNavigateToTradeHistory` parameter, "History" button in the sort bar
+
+---
+
 ## Feature: Sell Transactions + Realized P&L
 
 ### New Files

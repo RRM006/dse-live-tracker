@@ -6,7 +6,9 @@ import androidx.lifecycle.viewModelScope
 import com.dselivetracker.DseApp
 import com.dselivetracker.data.local.entity.PortfolioStock
 import com.dselivetracker.data.repository.PortfolioRepository
+import com.dselivetracker.ui.components.PieSlice
 import com.dselivetracker.ui.components.PortfolioSummary
+import com.dselivetracker.ui.components.pieColors
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -25,17 +27,27 @@ class PortfolioViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val stocks = portfolioRepo.getAllStocks()
     private val realizedPnl = portfolioRepo.getRealizedPnl()
+    private val trades = portfolioRepo.getAllTrades()
 
-    val summary: StateFlow<PortfolioSummary?> = stocks.combine(realizedPnl) { list, realized ->
+    val summary: StateFlow<PortfolioSummary?> = combine(stocks, realizedPnl, trades) { list, realized, tradeList ->
         if (list.isEmpty()) null
         else {
-            val totalCommission = list.sumOf { it.commission }
-            val invested = list.sumOf { it.buyPrice * it.quantity }
+            val buyCommission = list.sumOf { it.commission }
+            val tradeCommission = tradeList.sumOf { it.buyCommission + it.sellCommission }
+            val totalCommission = buyCommission + tradeCommission
+            val invested = list.sumOf { it.buyPrice * it.quantity + it.commission }
             val current = list.filter { it.lastLtp != null }.sumOf { it.lastLtp!! * it.quantity }
-            val unrealizedPnl = current - invested - totalCommission
+            val unrealizedPnl = current - invested
             val totalPnl = unrealizedPnl + realized
             val totalInvested = if (invested > 0) invested else 1.0
             val totalPct = (totalPnl / totalInvested) * 100
+            val slices = list.filter { it.lastLtp != null }.mapIndexed { index, stock ->
+                PieSlice(
+                    label = stock.symbol,
+                    value = stock.lastLtp!! * stock.quantity,
+                    color = pieColors[index % pieColors.size]
+                )
+            }
             PortfolioSummary(
                 invested = invested,
                 currentValue = current,
@@ -45,7 +57,8 @@ class PortfolioViewModel(application: Application) : AndroidViewModel(applicatio
                 countWithData = list.count { it.lastLtp != null },
                 realizedPnl = realized,
                 unrealizedPnl = unrealizedPnl,
-                totalCommission = totalCommission
+                totalCommission = totalCommission,
+                pieSlices = slices
             )
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)

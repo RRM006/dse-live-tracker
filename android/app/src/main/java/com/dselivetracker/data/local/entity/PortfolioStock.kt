@@ -13,5 +13,7 @@ data class PortfolioStock(
     val lastLtp: Double? = null,
     val prevLtp: Double? = null,
     val direction: String? = null,
+    val buyDate: Long? = null,
+    val sellDate: Long? = null,
     val lastUpdated: Long? = null
 )

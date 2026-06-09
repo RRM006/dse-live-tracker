@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import com.dselivetracker.ui.theme.LossRed
 import com.dselivetracker.ui.theme.ProfitGreen
 import com.dselivetracker.ui.theme.TextMuted
+import com.dselivetracker.utils.DateUtils
 import com.dselivetracker.utils.StockUtils
 
 val BuySignalGreen = Color(0xFF1B5E20)
@@ -48,7 +49,11 @@ fun StockCard(
     targetPrice: Double? = null,
     ycp: Double? = null,
     high: Double? = null,
-    low: Double? = null
+    low: Double? = null,
+    upperLimit: Double? = null,
+    lowerLimit: Double? = null,
+    category: String? = null,
+    buyDate: Long? = null
 ) {
     val pnl = if (lastLtp != null) (lastLtp - buyPrice) * quantity else null
     val pct = if (lastLtp != null && buyPrice > 0) ((lastLtp - buyPrice) / buyPrice) * 100 else null
@@ -94,11 +99,33 @@ fun StockCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = symbol,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = symbol,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        if (!category.isNullOrEmpty()) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = category,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier
+                                    .background(
+                                        when (category) {
+                                            "A" -> ProfitGreen.copy(alpha = 0.8f)
+                                            "B" -> MaterialTheme.colorScheme.primary
+                                            "Z" -> LossRed.copy(alpha = 0.8f)
+                                            else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                        },
+                                        shape = RoundedCornerShape(4.dp)
+                                    )
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
                     val stockName = StockUtils.getStockName(symbol)
                     if (stockName != symbol) {
                         Text(
@@ -197,6 +224,15 @@ fun StockCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+            if (upperLimit != null && upperLimit > 0) {
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "Circuit: \u09F3${formatBdt(lowerLimit ?: 0.0)} - \u09F3${formatBdt(upperLimit)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
             if (buyPrice > 0) {
                 Spacer(modifier = Modifier.height(6.dp))
                 Row(
@@ -218,6 +254,16 @@ fun StockCard(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
+                if (buyDate != null && !category.isNullOrEmpty()) {
+                    val settlementStr = DateUtils.formatSettlementDate(buyDate, category)
+                    if (settlementStr != null) {
+                        Text(
+                            text = "Settlement: $settlementStr",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
             if (targetPrice != null) {

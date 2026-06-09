@@ -16,6 +16,8 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -33,6 +35,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -48,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.dselivetracker.ui.components.StockCard
 import com.dselivetracker.ui.theme.DarkHeader
+import com.dselivetracker.utils.DateUtils
 import androidx.compose.foundation.text.KeyboardOptions
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -65,12 +69,33 @@ fun HoldingsScreen(
     val stockQuotes by viewModel.stockQuotes.collectAsState()
     val sellStockId by viewModel.sellStockId.collectAsState()
     val sellPrice by viewModel.sellPrice.collectAsState()
+    val sellDate by viewModel.sellDate.collectAsState()
 
     var showSortMenu by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     if (sellStockId != null) {
         val stock = sortedStocks.find { it.id == sellStockId }
+        var showDatePicker by remember { mutableStateOf(false) }
+        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = sellDate ?: System.currentTimeMillis())
+
+        if (showDatePicker) {
+            DatePickerDialog(
+                onDismissRequest = { showDatePicker = false },
+                confirmButton = {
+                    TextButton(onClick = {
+                        datePickerState.selectedDateMillis?.let { viewModel.updateSellDate(it) }
+                        showDatePicker = false
+                    }) { Text("OK") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
+                }
+            ) {
+                DatePicker(state = datePickerState)
+            }
+        }
+
         AlertDialog(
             onDismissRequest = { viewModel.hideSellDialog() },
             title = { Text("Sell ${stock?.symbol ?: ""}") },
@@ -86,6 +111,11 @@ fun HoldingsScreen(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    TextButton(onClick = { showDatePicker = true }) {
+                        val dateStr = if (sellDate != null) DateUtils.formatTimestamp(sellDate!!) else "Pick Sell Date"
+                        Text(if (sellDate != null) "Sell Date: $dateStr" else "Pick Sell Date")
+                    }
                     if (stock != null) {
                         val estValue = sellPrice.toDoubleOrNull()?.times(stock.quantity) ?: 0.0
                         val estCommission = estValue * 0.0004
@@ -287,7 +317,11 @@ fun HoldingsScreen(
                             },
                             ycp = ycpMap[stock.symbol],
                             high = quote?.high,
-                            low = quote?.low
+                            low = quote?.low,
+                            upperLimit = quote?.upperLimit,
+                            lowerLimit = quote?.lowerLimit,
+                            category = quote?.category,
+                            buyDate = stock.buyDate
                         )
                     }
                     item { Spacer(modifier = Modifier.height(8.dp)) }

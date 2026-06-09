@@ -1,5 +1,6 @@
 package com.dselivetracker.ui.screens.tradehistory
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -20,21 +22,27 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.dselivetracker.data.local.entity.SoldStock
+import com.dselivetracker.ui.components.formatBdt
 import com.dselivetracker.ui.theme.DarkHeader
 import com.dselivetracker.ui.theme.LossRed
 import com.dselivetracker.ui.theme.ProfitGreen
-import com.dselivetracker.ui.components.formatBdt
+import com.dselivetracker.utils.DateUtils
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -46,6 +54,28 @@ fun TradeHistoryScreen(
     viewModel: TradeHistoryViewModel = viewModel()
 ) {
     val trades by viewModel.trades.collectAsState()
+    var tradeToDelete by remember { mutableStateOf<SoldStock?>(null) }
+
+    if (tradeToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { tradeToDelete = null },
+            title = { Text("Remove Trade") },
+            text = { Text("Remove ${tradeToDelete!!.symbol} trade from history? This cannot be undone.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deleteTrade(tradeToDelete!!.id)
+                    tradeToDelete = null
+                }) {
+                    Text("Remove", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { tradeToDelete = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -92,6 +122,7 @@ fun TradeHistoryScreen(
                 )
             }
         } else {
+            val totalPnl = trades.sumOf { it.realizedPnl }
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
@@ -99,10 +130,8 @@ fun TradeHistoryScreen(
                     .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                var totalPnl = 0.0
                 items(trades, key = { it.id }) { trade ->
-                    totalPnl += trade.realizedPnl
-                    TradeCard(trade = trade)
+                    TradeCard(trade = trade, onRemove = { tradeToDelete = trade })
                 }
                 item {
                     val isProfit = totalPnl >= 0
@@ -143,7 +172,7 @@ fun TradeHistoryScreen(
 }
 
 @Composable
-private fun TradeCard(trade: SoldStock) {
+private fun TradeCard(trade: SoldStock, onRemove: () -> Unit = {}) {
     val isProfit = trade.realizedPnl >= 0
     val totalAmount = trade.sellPrice * trade.quantity
     val dateFormat = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault())
@@ -173,12 +202,26 @@ private fun TradeCard(trade: SoldStock) {
                     fontWeight = FontWeight.Bold,
                     color = if (isProfit) ProfitGreen else LossRed
                 )
+                Spacer(modifier = Modifier.padding(start = 4.dp))
+                Text(
+                    text = "\u2715",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.clickable { onRemove() }
+                )
             }
             Text(
                 text = dateStr,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            if (trade.sellDate != null) {
+                Text(
+                    text = "Sell date: ${DateUtils.formatTimestamp(trade.sellDate!!)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             Spacer(modifier = Modifier.height(6.dp))
             Row(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.weight(1f)) {

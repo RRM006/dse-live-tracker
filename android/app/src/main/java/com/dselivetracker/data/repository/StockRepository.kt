@@ -3,28 +3,25 @@ package com.dselivetracker.data.repository
 import com.dselivetracker.data.local.dao.StockCacheDao
 import com.dselivetracker.data.local.entity.StockCacheEntity
 import com.dselivetracker.data.remote.DseApiClient
-import com.dselivetracker.data.remote.NewsParser
 import com.dselivetracker.data.remote.QuotesParser
 import com.dselivetracker.data.remote.QuotesParser.StockQuoteFull
+import com.dselivetracker.data.remote.QuotesParser.Top20Entry
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 class StockRepository(private val cacheDao: StockCacheDao) {
-
     private val scope = CoroutineScope(Dispatchers.IO)
-
     private val _allStocks = MutableStateFlow<Map<String, StockQuoteFull>>(emptyMap())
     val allStocks: StateFlow<Map<String, StockQuoteFull>> = _allStocks
-
     private val _marketStatus = MutableStateFlow<String?>(null)
     val marketStatus: StateFlow<String?> = _marketStatus
-
-    private val _allNews = MutableStateFlow<List<NewsParser.NewsItem>>(emptyList())
-    val allNews: StateFlow<List<NewsParser.NewsItem>> = _allNews
-
+    private val _top20 = MutableStateFlow<List<Top20Entry>>(emptyList())
+    val top20: StateFlow<List<Top20Entry>> = _top20
     private var _hasNotified = mutableMapOf<String, Boolean>()
     val hasNotified: Map<String, Boolean> get() = _hasNotified
 
@@ -33,14 +30,12 @@ class StockRepository(private val cacheDao: StockCacheDao) {
             val cached = cacheDao.getAll()
             val map = cached.associate { entity ->
                 entity.symbol to StockQuoteFull(
-                    symbol = entity.symbol,
-                    ltp = entity.ltp,
-                    high = entity.high,
-                    low = entity.low,
-                    closep = entity.closep,
-                    ycp = entity.ycp,
-                    change = entity.change,
-                    pctChange = entity.pctChange
+                    symbol = entity.symbol, ltp = entity.ltp,
+                    high = entity.high, low = entity.low,
+                    closep = entity.closep, ycp = entity.ycp,
+                    change = entity.change, pctChange = entity.pctChange,
+                    upperLimit = entity.upperLimit, lowerLimit = entity.lowerLimit,
+                    category = entity.category
                 )
             }
             _allStocks.value = map
@@ -48,14 +43,30 @@ class StockRepository(private val cacheDao: StockCacheDao) {
     }
 
     suspend fun fetchAndUpdateAll() {
-        val (text1, html2, homepage) = DseApiClient.fetchAllThree()
+        val def1 = async { try { DseApiClient.fetchQuotes() } catch (e: Exception) { null } }
+        val def2 = async { try { DseApiClient.fetchFullQuotesHtml() } catch (e: Exception) { null } }
+        val def3 = async { try { DseApiClient.fetchHomepage() } catch (e: Exception) { null } }
+        val def4 = async { try { DseApiClient.fetchCbul() } catch (e: Exception) { null } }
+        val def5 = async { try { DseApiClient.fetchTop20() } catch (e: Exception) { null } }
+        val defA = async { try { DseApiClient.fetchCategoryPage("A") } catch (e: Exception) { null } }
+        val defB = async { try { DseApiClient.fetchCategoryPage("B") } catch (e: Exception) { null } }
+        val defZ = async { try { DseApiClient.fetchCategoryPage("Z") } catch (e: Exception) { null } }
+
+        val results = listOf(def1, def2, def3, def4, def5, defA, defB, defZ).awaitAll()
+        val text1 = results[0]
+        val html2 = results[1]
+        val homepage = results[2]
+        val cbulHtml = results[3]
+        val top20Html = results[4]
+        val catA = results[5]
+        val catB = results[6]
+        val catZ = results[7]
+
         val merged = mutableMapOf<String, StockQuoteFull>()
 
         if (homepage != null) {
             val parsed = QuotesParser.parseMarketStatus(homepage)
             if (parsed != null) _marketStatus.value = parsed
-            val news = NewsParser.parseNews(homepage)
-            if (news.isNotEmpty()) _allNews.value = news
         }
 
         if (html2 != null) {
@@ -69,32 +80,48 @@ class StockRepository(private val cacheDao: StockCacheDao) {
                 val existing = merged[quote.symbol]
                 if (existing == null || existing.ltp == 0.0) {
                     merged[quote.symbol] = StockQuoteFull(
-                        symbol = quote.symbol,
-                        ltp = quote.ltp,
-                        high = existing?.high ?: 0.0,
-                        low = existing?.low ?: 0.0,
-                        closep = existing?.closep ?: 0.0,
-                        ycp = existing?.ycp ?: 0.0,
-                        change = existing?.change ?: 0.0,
-                        pctChange = existing?.pctChange ?: 0.0
+                        symbol = quote.symbol, ltp = quote.ltp,
+                        high = existing?.high ?: 0.0, low = existing?.low ?: 0.0,
+                        closep = existing?.closep ?: 0.0, ycp = existing?.ycp ?: 0.0,
+                        change = existing?.change ?: 0.0, pctChange = existing?.pctChange ?: 0.0
                     )
                 }
             }
         }
 
+        val cbMap = if (cbulHtml != null) QuotesParser.parseCbulHtml(cbulHtml) else emptyMap()
+        for ((symbol, limits) in cbMap) {
+            val existing = merged[symbol]
+            if (existing != null) {
+                merged[symbol] = existing.copy(upperLimit = limits.first, lowerLimit = limits.second)
+            } else {
+                merged[symbol] = StockQuoteFull(symbol = symbol, ltp = 0.0, high = 0.0, low = 0.0, closep = 0.0, ycp = 0.0, change = 0.0, pctChange = 0.0, upperLimit = limits.first, lowerLimit = limits.second)
+            }
+        }
+
+        val categoryMap = mutableMapOf<String, String>()
+        listOf(catA to "A", catB to "B", catZ to "Z").forEach { (html, cat) ->
+            if (html != null) {
+                val symbols = QuotesParser.parseFullHtml(html).keys
+                for (sym in symbols) categoryMap[sym] = cat
+            }
+        }
+        for ((symbol, cat) in categoryMap) {
+            merged[symbol] = merged[symbol]?.copy(category = cat) ?: StockQuoteFull(symbol = symbol, ltp = 0.0, high = 0.0, low = 0.0, closep = 0.0, ycp = 0.0, change = 0.0, pctChange = 0.0, category = cat)
+        }
+
         _allStocks.value = merged
+
+        if (top20Html != null) {
+            _top20.value = QuotesParser.parseTop20Html(top20Html)
+        }
 
         if (merged.isNotEmpty()) {
             val entities = merged.map { (symbol, q) ->
                 StockCacheEntity(
-                    symbol = symbol,
-                    ltp = q.ltp,
-                    high = q.high,
-                    low = q.low,
-                    closep = q.closep,
-                    ycp = q.ycp,
-                    change = q.change,
-                    pctChange = q.pctChange,
+                    symbol = symbol, ltp = q.ltp, high = q.high, low = q.low,
+                    closep = q.closep, ycp = q.ycp, change = q.change, pctChange = q.pctChange,
+                    upperLimit = q.upperLimit, lowerLimit = q.lowerLimit, category = q.category,
                     lastUpdated = System.currentTimeMillis()
                 )
             }
@@ -105,11 +132,6 @@ class StockRepository(private val cacheDao: StockCacheDao) {
 
     fun getBySymbol(symbol: String): StockQuoteFull? = _allStocks.value[symbol]
 
-    fun markNotified(symbol: String) {
-        _hasNotified[symbol] = true
-    }
-
-    fun resetNotifiedFlag(symbol: String) {
-        _hasNotified.remove(symbol)
-    }
+    fun markNotified(symbol: String) { _hasNotified[symbol] = true }
+    fun resetNotifiedFlag(symbol: String) { _hasNotified.remove(symbol) }
 }

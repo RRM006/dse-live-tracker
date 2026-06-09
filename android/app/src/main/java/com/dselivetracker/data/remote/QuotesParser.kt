@@ -18,8 +18,73 @@ object QuotesParser {
         val closep: Double,
         val ycp: Double,
         val change: Double,
-        val pctChange: Double
+        val pctChange: Double,
+        val upperLimit: Double = 0.0,
+        val lowerLimit: Double = 0.0,
+        val category: String = ""
     )
+
+    fun parseCbulHtml(html: String): Map<String, Pair<Double, Double>> {
+        val doc = Jsoup.parse(html)
+        val rows = doc.select("table tbody tr")
+        val result = mutableMapOf<String, Pair<Double, Double>>()
+        for (row in rows) {
+            val cells = row.select("td")
+            if (cells.size >= 3) {
+                val symbol = cells[0].text().trim().uppercase()
+                val ceiling = cells[1].text().replace(",", "").toDoubleOrNull() ?: 0.0
+                val floor = cells[2].text().replace(",", "").toDoubleOrNull() ?: 0.0
+                if (symbol.isNotEmpty() && ceiling > 0) {
+                    result[symbol] = Pair(ceiling, floor)
+                }
+            }
+        }
+        return result
+    }
+
+    data class Top20Entry(
+        val rank: Int,
+        val symbol: String,
+        val ltp: Double,
+        val high: Double,
+        val low: Double,
+        val closep: Double,
+        val ycp: Double,
+        val change: Double,
+        val pctChange: Double,
+        val tradeCount: Long = 0,
+        val value: Double = 0.0,
+        val volume: Long = 0
+    )
+
+    fun parseTop20Html(html: String): List<Top20Entry> {
+        val doc = Jsoup.parse(html)
+        val rows = doc.select("table tbody tr")
+        val result = mutableListOf<Top20Entry>()
+        for (row in rows) {
+            val cells = row.select("td")
+            if (cells.size >= 12) {
+                val symbol = cells[1].text().trim().uppercase()
+                if (symbol.isNotEmpty()) {
+                    result.add(Top20Entry(
+                        rank = cells[0].text().toIntOrNull() ?: 0,
+                        symbol = symbol,
+                        ltp = cells[2].text().replace(",", "").toDoubleOrNull() ?: 0.0,
+                        high = cells[3].text().replace(",", "").toDoubleOrNull() ?: 0.0,
+                        low = cells[4].text().replace(",", "").toDoubleOrNull() ?: 0.0,
+                        closep = cells[5].text().replace(",", "").toDoubleOrNull() ?: 0.0,
+                        ycp = cells[6].text().replace(",", "").toDoubleOrNull() ?: 0.0,
+                        change = cells[7].text().replace(",", "").toDoubleOrNull() ?: 0.0,
+                        pctChange = cells[8].text().replace(",", "").replace("%", "").toDoubleOrNull() ?: 0.0,
+                        tradeCount = cells[9].text().replace(",", "").toLongOrNull() ?: 0,
+                        value = cells[10].text().replace(",", "").toDoubleOrNull() ?: 0.0,
+                        volume = cells[11].text().replace(",", "").toLongOrNull() ?: 0
+                    ))
+                }
+            }
+        }
+        return result
+    }
 
     fun parse(text: String): ParsedQuotes {
         val lines = text.split("\n")

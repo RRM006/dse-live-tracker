@@ -25,4 +25,7 @@ interface TradeHistoryDao {
 
     @Query("SELECT COALESCE(SUM(buyCommission + sellCommission), 0) FROM trade_history")
     suspend fun getTotalTradeCommissionOnce(): Double
+
+    @Query("DELETE FROM trade_history WHERE id = :id")
+    suspend fun deleteById(id: Long)
 }

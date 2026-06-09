@@ -21,6 +21,9 @@ data class SearchResult(
     val high: Double = 0.0,
     val low: Double = 0.0,
     val closep: Double = 0.0,
+    val upperLimit: Double = 0.0,
+    val lowerLimit: Double = 0.0,
+    val category: String = "",
     val timestamp: String? = null
 )
 
@@ -147,7 +150,10 @@ class SearchViewModel(application: Application) : AndroidViewModel(application) 
                     ycp = info.ycp,
                     high = info.high,
                     low = info.low,
-                    closep = info.closep
+                    closep = info.closep,
+                    upperLimit = info.upperLimit,
+                    lowerLimit = info.lowerLimit,
+                    category = info.category
                 )
 
                 val existing = portfolioRepo.getBySymbol(sym)

@@ -17,4 +17,10 @@ class TradeHistoryViewModel(application: Application) : AndroidViewModel(applica
 
     val trades: StateFlow<List<SoldStock>> = portfolioRepo.getAllTrades()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun deleteTrade(id: Long) {
+        viewModelScope.launch {
+            portfolioRepo.removeTrade(id)
+        }
+    }
 }

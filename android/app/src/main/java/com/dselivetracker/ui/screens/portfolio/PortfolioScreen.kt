@@ -10,6 +10,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -18,13 +20,17 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -34,6 +40,7 @@ import com.dselivetracker.ui.components.MarketStatusBar
 import com.dselivetracker.ui.components.PieChart
 import com.dselivetracker.ui.components.SummaryCard
 import com.dselivetracker.ui.theme.DarkHeader
+import com.dselivetracker.utils.DateUtils
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -50,6 +57,8 @@ fun PortfolioScreen(
     val lastUpdated by viewModel.lastUpdated.collectAsState()
     val error by viewModel.error.collectAsState()
     val marketStatus by viewModel.marketStatus.collectAsState()
+    val autocompleteSuggestions by viewModel.autocompleteSuggestions.collectAsState()
+    val buyDate by viewModel.buyDate.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) {
@@ -129,6 +138,26 @@ fun PortfolioScreen(
                     viewModel.clearError()
                 }
 
+                var showBuyDatePicker by remember { mutableStateOf(false) }
+                val buyDatePickerState = rememberDatePickerState(initialSelectedDateMillis = buyDate ?: System.currentTimeMillis())
+
+                if (showBuyDatePicker) {
+                    DatePickerDialog(
+                        onDismissRequest = { showBuyDatePicker = false },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                buyDatePickerState.selectedDateMillis?.let { viewModel.updateBuyDate(it) }
+                                showBuyDatePicker = false
+                            }) { Text("OK") }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showBuyDatePicker = false }) { Text("Cancel") }
+                        }
+                    ) {
+                        DatePicker(state = buyDatePickerState)
+                    }
+                }
+
                 AddStockForm(
                     symbol = symbol,
                     onSymbolChange = { viewModel.updateSymbol(it) },
@@ -136,8 +165,19 @@ fun PortfolioScreen(
                     onBuyPriceChange = { viewModel.updateBuyPrice(it) },
                     quantity = quantity,
                     onQuantityChange = { viewModel.updateQuantity(it) },
-                    onAdd = { viewModel.addStock() }
+                    onAdd = { viewModel.addStock() },
+                    autocompleteSuggestions = autocompleteSuggestions,
+                    onSelectSuggestion = { viewModel.selectSymbol(it) },
+                    onDismissAutocomplete = { viewModel.hideAutocomplete() }
                 )
+                Spacer(modifier = Modifier.height(4.dp))
+                TextButton(onClick = { showBuyDatePicker = true }) {
+                    val dateStr = if (buyDate != null) DateUtils.formatTimestamp(buyDate!!) else "Add Buy Date (optional)"
+                    Text(
+                        text = if (buyDate != null) "Buy Date: $dateStr" else "Add Buy Date (optional)",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
 
                 if (lastUpdated != null) {
                     Spacer(modifier = Modifier.height(8.dp))

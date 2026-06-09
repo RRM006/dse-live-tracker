@@ -51,7 +51,7 @@ sealed class Screen(
             return "search?s=$symbol&b=$buyPrice&q=$quantity"
         }
     }
-    data object News : Screen("news", "News", Icons.Filled.Article, Icons.Outlined.Article)
+    data object News : Screen("news", "Top 20", Icons.Filled.Article, Icons.Outlined.Article)
     data object TradeHistory : Screen("trade_history", "Trade History", Icons.Filled.AccountBalance, Icons.Outlined.AccountBalance)
 }
 

@@ -9,6 +9,7 @@ import com.dselivetracker.data.repository.PortfolioRepository
 import com.dselivetracker.ui.components.PieSlice
 import com.dselivetracker.ui.components.PortfolioSummary
 import com.dselivetracker.ui.components.pieColors
+import com.dselivetracker.utils.StockUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -83,9 +84,49 @@ class PortfolioViewModel(application: Application) : AndroidViewModel(applicatio
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
 
-    fun updateSymbol(value: String) { _symbol.value = value.uppercase() }
+    private val _autocompleteSuggestions = MutableStateFlow<List<String>>(emptyList())
+    val autocompleteSuggestions: StateFlow<List<String>> = _autocompleteSuggestions
+
+    private val _buyDate = MutableStateFlow<Long?>(null)
+    val buyDate: StateFlow<Long?> = _buyDate
+
+    fun updateSymbol(value: String) {
+        _symbol.value = value.uppercase()
+        val query = value.uppercase()
+        if (query.length >= 1) {
+            val allSymbols = stockRepo.allStocks.value.keys.toList()
+            val matches = allSymbols.filter { sym ->
+                sym.contains(query) || StockUtils.getStockName(sym).uppercase().contains(query)
+            }.sortedBy { sym ->
+                val name = StockUtils.getStockName(sym).uppercase()
+                when {
+                    sym.startsWith(query) -> 0
+                    name.startsWith(query) -> 1
+                    else -> 2
+                }
+            }
+            _autocompleteSuggestions.value = matches.take(8).map { sym ->
+                val name = StockUtils.getStockName(sym)
+                if (name != sym) "$sym - $name" else sym
+            }
+        } else {
+            _autocompleteSuggestions.value = emptyList()
+        }
+    }
+
+    fun selectSymbol(suggestion: String) {
+        val sym = suggestion.split(" - ")[0]
+        _symbol.value = sym
+        _autocompleteSuggestions.value = emptyList()
+    }
+
+    fun hideAutocomplete() {
+        _autocompleteSuggestions.value = emptyList()
+    }
+
     fun updateBuyPrice(value: String) { _buyPrice.value = value }
     fun updateQuantity(value: String) { _quantity.value = value }
+    fun updateBuyDate(timestamp: Long?) { _buyDate.value = timestamp }
     fun clearError() { _error.value = null }
 
     fun addStock() {
@@ -99,10 +140,11 @@ class PortfolioViewModel(application: Application) : AndroidViewModel(applicatio
                 _error.value = "$sym already in portfolio"
                 return@launch
             }
-            portfolioRepo.addStock(sym, bp, qty)
+            portfolioRepo.addStock(sym, bp, qty, _buyDate.value)
             _symbol.value = ""
             _buyPrice.value = ""
             _quantity.value = ""
+            _buyDate.value = null
         }
     }
 

@@ -12,16 +12,9 @@ class PortfolioRepository(private val dao: PortfolioDao, private val tradeDao: T
 
     suspend fun getAllStocksOnce(): List<PortfolioStock> = dao.getAllStocksOnce()
 
-    suspend fun addStock(symbol: String, buyPrice: Double, quantity: Int): Long {
+    suspend fun addStock(symbol: String, buyPrice: Double, quantity: Int, buyDate: Long? = null): Long {
         val commission = buyPrice * quantity * 0.0004
-        return dao.insert(
-            PortfolioStock(
-                symbol = symbol.uppercase(),
-                buyPrice = buyPrice,
-                quantity = quantity,
-                commission = commission
-            )
-        )
+        return dao.insert(PortfolioStock(symbol = symbol.uppercase(), buyPrice = buyPrice, quantity = quantity, commission = commission, buyDate = buyDate))
     }
 
     suspend fun removeStock(id: Long) = dao.deleteById(id)
@@ -36,22 +29,12 @@ class PortfolioRepository(private val dao: PortfolioDao, private val tradeDao: T
         dao.updateDetails(id, buyPrice, quantity)
     }
 
-    suspend fun sellStock(id: Long, sellPrice: Double) {
+    suspend fun sellStock(id: Long, sellPrice: Double, sellDate: Long? = null) {
         val stock = dao.getAllStocksOnce().find { it.id == id } ?: return
         val buyCommission = stock.commission
         val sellCommission = sellPrice * stock.quantity * 0.0004
         val realizedPnl = (sellPrice - stock.buyPrice) * stock.quantity - buyCommission - sellCommission
-        tradeDao.insert(
-            SoldStock(
-                symbol = stock.symbol,
-                buyPrice = stock.buyPrice,
-                sellPrice = sellPrice,
-                quantity = stock.quantity,
-                buyCommission = buyCommission,
-                sellCommission = sellCommission,
-                realizedPnl = realizedPnl
-            )
-        )
+        tradeDao.insert(SoldStock(symbol = stock.symbol, buyPrice = stock.buyPrice, sellPrice = sellPrice, quantity = stock.quantity, buyCommission = buyCommission, sellCommission = sellCommission, realizedPnl = realizedPnl, sellDate = sellDate))
         dao.deleteById(id)
     }
 
@@ -62,4 +45,6 @@ class PortfolioRepository(private val dao: PortfolioDao, private val tradeDao: T
     fun getAllTrades(): Flow<List<SoldStock>> = tradeDao.getAllTrades()
 
     suspend fun getTotalTradeCommissionOnce(): Double = tradeDao.getTotalTradeCommissionOnce()
+
+    suspend fun removeTrade(id: Long) = tradeDao.deleteById(id)
 }

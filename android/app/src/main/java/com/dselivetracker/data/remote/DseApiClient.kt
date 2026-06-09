@@ -113,4 +113,59 @@ object DseApiClient {
         val (r1, r2, r3) = awaitAll(def1, def2, def3)
         Triple(r1, r2, r3)
     }
+
+    suspend fun fetchCbul(): String? = withContext(Dispatchers.IO) {
+        val urls = listOf("https://www.dsebd.org/cbul.php", PROXY_BASE + URLEncoder.encode("https://www.dsebd.org/cbul.php", "UTF-8"))
+        for (url in urls) {
+            for (attempt in 0..MAX_RETRIES) {
+                try {
+                    val request = Request.Builder().url(url)
+                        .cacheControl(CacheControl.Builder().noCache().build()).build()
+                    val response = client.newCall(request).execute()
+                    if (response.isSuccessful) return@withContext response.body?.string()
+                    response.close()
+                } catch (e: Exception) {
+                    if (attempt < MAX_RETRIES) delay(RETRY_DELAY_MS)
+                }
+            }
+        }
+        null
+    }
+
+    suspend fun fetchTop20(): String? = withContext(Dispatchers.IO) {
+        val urls = listOf("https://www.dsebd.org/top_20_share.php", PROXY_BASE + URLEncoder.encode("https://www.dsebd.org/top_20_share.php", "UTF-8"))
+        for (url in urls) {
+            for (attempt in 0..MAX_RETRIES) {
+                try {
+                    val request = Request.Builder().url(url)
+                        .cacheControl(CacheControl.Builder().noCache().build()).build()
+                    val response = client.newCall(request).execute()
+                    if (response.isSuccessful) return@withContext response.body?.string()
+                    response.close()
+                } catch (e: Exception) {
+                    if (attempt < MAX_RETRIES) delay(RETRY_DELAY_MS)
+                }
+            }
+        }
+        null
+    }
+
+    suspend fun fetchCategoryPage(group: String): String? = withContext(Dispatchers.IO) {
+        val url = "https://www.dsebd.org/latest_share_price_scroll_group.php?group=$group"
+        val urls = listOf(url, PROXY_BASE + URLEncoder.encode(url, "UTF-8"))
+        for (u in urls) {
+            for (attempt in 0..MAX_RETRIES) {
+                try {
+                    val request = Request.Builder().url(u)
+                        .cacheControl(CacheControl.Builder().noCache().build()).build()
+                    val response = client.newCall(request).execute()
+                    if (response.isSuccessful) return@withContext response.body?.string()
+                    response.close()
+                } catch (e: Exception) {
+                    if (attempt < MAX_RETRIES) delay(RETRY_DELAY_MS)
+                }
+            }
+        }
+        null
+    }
 }

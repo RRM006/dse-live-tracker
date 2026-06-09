@@ -21,6 +21,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.nativeCanvas
+import com.dselivetracker.ui.components.formatBdt
 import com.dselivetracker.ui.theme.Blue400
 import com.dselivetracker.ui.theme.Blue500
 import com.dselivetracker.ui.theme.Blue600
@@ -48,6 +50,7 @@ fun PieChart(
     if (slices.isEmpty()) return
 
     val total = slices.sumOf { it.value }.let { if (it <= 0) 1.0 else it }
+    val surfaceColor = MaterialTheme.colorScheme.surface
 
     Column(modifier = modifier.fillMaxWidth()) {
         Box(
@@ -93,7 +96,7 @@ fun PieChart(
                     }
                 }
                 drawCircle(
-                    color = MaterialTheme.colorScheme.surface,
+                    color = surfaceColor,
                     radius = diameter * 0.3f,
                     center = Offset(size.width / 2f, size.height / 2f)
                 )

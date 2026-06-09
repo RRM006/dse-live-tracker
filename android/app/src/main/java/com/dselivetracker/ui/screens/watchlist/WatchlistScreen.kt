@@ -168,7 +168,7 @@ fun WatchlistScreen(
                                 modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
                             )
                         }
-                        items(bestToBuy, key = { it.id }) { stock ->
+                        items(bestToBuy, key = { "best_${it.id}" }) { stock ->
                             StockCard(
                                 symbol = stock.symbol,
                                 buyPrice = 0.0,
@@ -197,7 +197,12 @@ fun WatchlistScreen(
                             )
                         }
                     }
-                    items(watchlistStocks, key = { it.id }) { stock ->
+                    
+                    val remainingStocks = watchlistStocks.filter { stock -> 
+                        bestToBuy.none { it.id == stock.id }
+                    }
+                    
+                    items(remainingStocks, key = { it.id }) { stock ->
                         val targetHit = stock.targetPrice?.let { target ->
                             stock.lastLtp?.let { ltp -> ltp <= target }
                         } ?: false

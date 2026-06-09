@@ -76,27 +76,37 @@ class HoldingsViewModel(application: Application) : AndroidViewModel(application
     private val _sellPrice = MutableStateFlow("")
     val sellPrice: StateFlow<String> = _sellPrice
 
+    private val _sellDate = MutableStateFlow<Long?>(null)
+    val sellDate: StateFlow<Long?> = _sellDate
+
     fun showSellDialog(id: Long) {
         _sellStockId.value = id
         _sellPrice.value = ""
+        _sellDate.value = System.currentTimeMillis()
     }
 
     fun hideSellDialog() {
         _sellStockId.value = null
         _sellPrice.value = ""
+        _sellDate.value = null
     }
 
     fun updateSellPrice(value: String) {
         _sellPrice.value = value
     }
 
+    fun updateSellDate(timestamp: Long) {
+        _sellDate.value = timestamp
+    }
+
     fun confirmSell() {
         val id = _sellStockId.value ?: return
         val price = _sellPrice.value.toDoubleOrNull() ?: return
         viewModelScope.launch {
-            portfolioRepo.sellStock(id, price)
+            portfolioRepo.sellStock(id, price, _sellDate.value)
             _sellStockId.value = null
             _sellPrice.value = ""
+            _sellDate.value = null
         }
     }
 
@@ -130,7 +140,7 @@ class HoldingsViewModel(application: Application) : AndroidViewModel(application
         val stock = _pendingRemove.value ?: return
         undoJob?.cancel()
         viewModelScope.launch {
-            portfolioRepo.addStock(stock.symbol, stock.buyPrice, stock.quantity)
+            portfolioRepo.addStock(stock.symbol, stock.buyPrice, stock.quantity, stock.buyDate)
             _pendingRemove.value = null
         }
     }

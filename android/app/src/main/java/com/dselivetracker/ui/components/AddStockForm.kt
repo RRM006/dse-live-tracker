@@ -1,5 +1,6 @@
 package com.dselivetracker.ui.components
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -9,6 +10,8 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -18,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.PopupProperties
 
 @Composable
 fun AddStockForm(
@@ -31,7 +35,10 @@ fun AddStockForm(
     modifier: Modifier = Modifier,
     targetPrice: String? = null,
     onTargetPriceChange: ((String) -> Unit)? = null,
-    buttonText: String = "+ Add to Portfolio"
+    buttonText: String = "+ Add to Portfolio",
+    autocompleteSuggestions: List<String> = emptyList(),
+    onSelectSuggestion: (String) -> Unit = {},
+    onDismissAutocomplete: () -> Unit = {}
 ) {
     Column(modifier = modifier.padding(12.dp)) {
         Text(
@@ -41,16 +48,33 @@ fun AddStockForm(
         )
         Spacer(modifier = Modifier.height(8.dp))
 
-        OutlinedTextField(
-            value = symbol,
-            onValueChange = { onSymbolChange(it.uppercase()) },
-            label = { Text("Stock Symbol") },
-            placeholder = { Text("e.g. GP") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-            colors = OutlinedTextFieldDefaults.colors()
-        )
+        Box {
+            OutlinedTextField(
+                value = symbol,
+                onValueChange = { onSymbolChange(it.uppercase()) },
+                label = { Text("Stock Symbol") },
+                placeholder = { Text("e.g. GP") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                colors = OutlinedTextFieldDefaults.colors()
+            )
+            if (autocompleteSuggestions.isNotEmpty()) {
+                DropdownMenu(
+                    expanded = true,
+                    onDismissRequest = { onDismissAutocomplete() },
+                    modifier = Modifier.fillMaxWidth(0.9f),
+                    properties = PopupProperties(focusable = false)
+                ) {
+                    autocompleteSuggestions.forEach { suggestion ->
+                        DropdownMenuItem(
+                            text = { Text(suggestion) },
+                            onClick = { onSelectSuggestion(suggestion) }
+                        )
+                    }
+                }
+            }
+        }
         Spacer(modifier = Modifier.height(8.dp))
 
         OutlinedTextField(

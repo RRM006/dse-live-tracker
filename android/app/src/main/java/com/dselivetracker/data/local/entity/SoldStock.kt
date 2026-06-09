@@ -13,5 +13,6 @@ data class SoldStock(
     val buyCommission: Double,
     val sellCommission: Double,
     val realizedPnl: Double,
+    val sellDate: Long? = null,
     val soldAt: Long = System.currentTimeMillis()
 )

@@ -104,8 +104,8 @@ fun SummaryCard(
                     .padding(top = 6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Unrealized P/L",
+                    Text(
+                        text = "Holding P/L",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -125,7 +125,7 @@ fun SummaryCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Realized P/L",
+                        text = "Closed P/L",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

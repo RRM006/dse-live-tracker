@@ -17,7 +17,7 @@ import com.dselivetracker.data.local.entity.WatchlistStock
 
 @Database(
     entities = [PortfolioStock::class, WatchlistStock::class, StockCacheEntity::class, SoldStock::class],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -53,20 +53,29 @@ abstract class AppDatabase : RoomDatabase() {
                 database.execSQL("ALTER TABLE portfolio_stocks ADD COLUMN commission REAL NOT NULL DEFAULT 0")
                 database.execSQL("ALTER TABLE watchlist_stocks ADD COLUMN high REAL")
                 database.execSQL("ALTER TABLE watchlist_stocks ADD COLUMN low REAL")
-                database.execSQL(
-                    "CREATE TABLE IF NOT EXISTS trade_history (" +
-                            "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
-                            "symbol TEXT NOT NULL, " +
-                            "buyPrice REAL NOT NULL, " +
-                            "sellPrice REAL NOT NULL, " +
-                            "quantity INTEGER NOT NULL, " +
-                            "buyCommission REAL NOT NULL, " +
-                            "sellCommission REAL NOT NULL, " +
-                            "realizedPnl REAL NOT NULL, " +
-                            "soldAt INTEGER NOT NULL" +
-                            ")"
-                )
+                database.execSQL("CREATE TABLE IF NOT EXISTS trade_history (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, symbol TEXT NOT NULL, buyPrice REAL NOT NULL, sellPrice REAL NOT NULL, quantity INTEGER NOT NULL, buyCommission REAL NOT NULL, sellCommission REAL NOT NULL, realizedPnl REAL NOT NULL, soldAt INTEGER NOT NULL)")
             }
+        }
+
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE stock_cache ADD COLUMN upperLimit REAL NOT NULL DEFAULT 0")
+                database.execSQL("ALTER TABLE stock_cache ADD COLUMN lowerLimit REAL NOT NULL DEFAULT 0")
+                database.execSQL("ALTER TABLE stock_cache ADD COLUMN category TEXT NOT NULL DEFAULT ''")
+                database.execSQL("ALTER TABLE portfolio_stocks ADD COLUMN buyDate INTEGER")
+                database.execSQL("ALTER TABLE portfolio_stocks ADD COLUMN sellDate INTEGER")
+                database.execSQL("ALTER TABLE trade_history ADD COLUMN sellDate INTEGER")
+            }
+        }
+
+        fun getInstance(context: Context): AppDatabase {
+            return INSTANCE ?: synchronized(this) {
+                val instance = Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "dse_tracker_db")
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4).build()
+                INSTANCE = instance
+                instance
+            }
+        }
         }
 
         fun getInstance(context: Context): AppDatabase {

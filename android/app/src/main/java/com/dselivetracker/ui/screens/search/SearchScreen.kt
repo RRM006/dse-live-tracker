@@ -50,6 +50,7 @@ import com.dselivetracker.ui.components.formatBdt
 import com.dselivetracker.ui.theme.DarkHeader
 import com.dselivetracker.ui.theme.LossRed
 import com.dselivetracker.ui.theme.ProfitGreen
+import com.dselivetracker.data.remote.QuotesParser.StockQuoteFull
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Scaffold
@@ -274,6 +275,22 @@ fun SearchScreen(
                                         color = color
                                     )
                                 }
+                            }
+
+                            if (r.upperLimit > 0) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Circuit: \u09F3${formatBdt(r.lowerLimit)} - \u09F3${formatBdt(r.upperLimit)}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            if (r.category.isNotEmpty()) {
+                                Text(
+                                    text = "Category: ${r.category}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
 
                             Spacer(modifier = Modifier.height(4.dp))

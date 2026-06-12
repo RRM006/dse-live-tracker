@@ -17,7 +17,7 @@ import com.dselivetracker.data.local.entity.WatchlistStock
 
 @Database(
     entities = [PortfolioStock::class, WatchlistStock::class, StockCacheEntity::class, SoldStock::class],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -53,7 +53,19 @@ abstract class AppDatabase : RoomDatabase() {
                 database.execSQL("ALTER TABLE portfolio_stocks ADD COLUMN commission REAL NOT NULL DEFAULT 0")
                 database.execSQL("ALTER TABLE watchlist_stocks ADD COLUMN high REAL")
                 database.execSQL("ALTER TABLE watchlist_stocks ADD COLUMN low REAL")
-                database.execSQL("CREATE TABLE IF NOT EXISTS trade_history (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, symbol TEXT NOT NULL, buyPrice REAL NOT NULL, sellPrice REAL NOT NULL, quantity INTEGER NOT NULL, buyCommission REAL NOT NULL, sellCommission REAL NOT NULL, realizedPnl REAL NOT NULL, soldAt INTEGER NOT NULL)")
+                database.execSQL(
+                    "CREATE TABLE IF NOT EXISTS trade_history (" +
+                            "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                            "symbol TEXT NOT NULL, " +
+                            "buyPrice REAL NOT NULL, " +
+                            "sellPrice REAL NOT NULL, " +
+                            "quantity INTEGER NOT NULL, " +
+                            "buyCommission REAL NOT NULL, " +
+                            "sellCommission REAL NOT NULL, " +
+                            "realizedPnl REAL NOT NULL, " +
+                            "soldAt INTEGER NOT NULL" +
+                            ")"
+                )
             }
         }
 
@@ -68,14 +80,10 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        fun getInstance(context: Context): AppDatabase {
-            return INSTANCE ?: synchronized(this) {
-                val instance = Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "dse_tracker_db")
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4).build()
-                INSTANCE = instance
-                instance
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("UPDATE portfolio_stocks SET commission = ROUND(buyPrice * quantity * 0.00425, 2)")
             }
-        }
         }
 
         fun getInstance(context: Context): AppDatabase {
@@ -85,7 +93,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "dse_tracker_db"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                     .build()
                 INSTANCE = instance
                 instance

@@ -2,6 +2,7 @@ package com.dselivetracker.ui.screens.news
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
 import com.dselivetracker.DseApp
 import com.dselivetracker.data.remote.QuotesParser.Top20Entry
 import kotlinx.coroutines.flow.SharingStarted

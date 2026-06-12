@@ -50,6 +50,8 @@ fun StockCard(
     ycp: Double? = null,
     high: Double? = null,
     low: Double? = null,
+    closep: Double? = null,
+    change: Double? = null,
     upperLimit: Double? = null,
     lowerLimit: Double? = null,
     category: String? = null,
@@ -187,9 +189,18 @@ fun StockCard(
                     color = if (targetHit) ProfitGreen else MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.weight(1f))
-                if (pct != null) {
+                if (change != null) {
+                    val changeColor = if (change >= 0) ProfitGreen else LossRed
                     Text(
-                        text = "${if (isProfit == true) "+" else ""}${"%.2f".format(kotlin.math.abs(pct))}%",
+                        text = "${if (change >= 0) "+" else ""}\u09F3${formatBdt(change)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = changeColor
+                    )
+                }
+                if (pct != null) {
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "(${if (isProfit == true) "+" else ""}${"%.2f".format(kotlin.math.abs(pct))}%)",
                         style = MaterialTheme.typography.bodySmall,
                         color = color
                     )
@@ -216,6 +227,13 @@ fun StockCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+            }
+            if (closep != null) {
+                Text(
+                    text = "CLOSEP: \u09F3${formatBdt(closep)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
             if (ycp != null) {
                 Text(

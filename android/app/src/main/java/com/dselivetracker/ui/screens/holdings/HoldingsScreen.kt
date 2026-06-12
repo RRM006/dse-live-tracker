@@ -118,7 +118,10 @@ fun HoldingsScreen(
                     }
                     if (stock != null) {
                         val estValue = sellPrice.toDoubleOrNull()?.times(stock.quantity) ?: 0.0
-                        val estCommission = estValue * 0.0004
+                        val brokerFee = estValue * 0.004
+                        val dseFee = estValue * 0.00025
+                        val aitFee = estValue * 0.0005
+                        val estCommission = brokerFee + dseFee + aitFee
                         val buyCommission = stock.commission
                         val estPnl = sellPrice.toDoubleOrNull()?.let { price ->
                             (price - stock.buyPrice) * stock.quantity - buyCommission - estCommission
@@ -129,7 +132,15 @@ fun HoldingsScreen(
                             style = MaterialTheme.typography.bodySmall
                         )
                         Text(
-                            text = "Est. commission: ৳${com.dselivetracker.ui.components.formatBdt(estCommission)}",
+                            text = "Broker (0.40%): ৳${com.dselivetracker.ui.components.formatBdt(brokerFee)}",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Text(
+                            text = "DSE (0.025%): ৳${com.dselivetracker.ui.components.formatBdt(dseFee)}",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Text(
+                            text = "AIT (0.05%): ৳${com.dselivetracker.ui.components.formatBdt(aitFee)}",
                             style = MaterialTheme.typography.bodySmall
                         )
                         if (estPnl != null) {
@@ -318,6 +329,8 @@ fun HoldingsScreen(
                             ycp = ycpMap[stock.symbol],
                             high = quote?.high,
                             low = quote?.low,
+                            closep = quote?.closep,
+                            change = quote?.change,
                             upperLimit = quote?.upperLimit,
                             lowerLimit = quote?.lowerLimit,
                             category = quote?.category,

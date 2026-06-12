@@ -28,6 +28,7 @@ data class PortfolioSummary(
     val realizedPnl: Double = 0.0,
     val unrealizedPnl: Double = 0.0,
     val totalCommission: Double = 0.0,
+    val capitalGainsTax: Double = 0.0,
     val pieSlices: List<PieSlice> = emptyList()
 )
 
@@ -146,7 +147,7 @@ fun SummaryCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Commission",
+                        text = "Total Fees (Broker + DSE + AIT)",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -159,6 +160,26 @@ fun SummaryCard(
                 }
             }
 
+            if (summary.capitalGainsTax > 0) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Capital Gains Tax (15%)",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    Text(
+                        text = "-৳${formatBdt(summary.capitalGainsTax)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = LossRed
+                    )
+                }
+            }
+
             Spacer(modifier = Modifier.height(4.dp))
             Row(
                 modifier = Modifier
@@ -167,7 +188,7 @@ fun SummaryCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Total P/L",
+                    text = if (summary.capitalGainsTax > 0) "Net Total P/L" else "Total P/L",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

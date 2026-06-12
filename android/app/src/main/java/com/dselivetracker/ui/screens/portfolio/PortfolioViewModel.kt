@@ -39,7 +39,8 @@ class PortfolioViewModel(application: Application) : AndroidViewModel(applicatio
             val invested = list.sumOf { it.buyPrice * it.quantity + it.commission }
             val current = list.filter { it.lastLtp != null }.sumOf { it.lastLtp!! * it.quantity }
             val unrealizedPnl = current - invested
-            val totalPnl = unrealizedPnl + realized
+            val capitalGainsTax = if (realized > 5_000_000) (realized - 5_000_000) * 0.15 else 0.0
+            val totalPnl = unrealizedPnl + realized - capitalGainsTax
             val totalInvested = if (invested > 0) invested else 1.0
             val totalPct = (totalPnl / totalInvested) * 100
             val slices = list.filter { it.lastLtp != null }.mapIndexed { index, stock ->
@@ -59,6 +60,7 @@ class PortfolioViewModel(application: Application) : AndroidViewModel(applicatio
                 realizedPnl = realized,
                 unrealizedPnl = unrealizedPnl,
                 totalCommission = totalCommission,
+                capitalGainsTax = capitalGainsTax,
                 pieSlices = slices
             )
         }

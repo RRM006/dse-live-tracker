@@ -9,6 +9,7 @@ import com.dselivetracker.data.repository.PortfolioRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 class TradeHistoryViewModel(application: Application) : AndroidViewModel(application) {
     private val app = application as DseApp

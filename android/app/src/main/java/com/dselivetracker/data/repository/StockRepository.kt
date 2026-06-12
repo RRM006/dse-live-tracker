@@ -10,6 +10,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -42,7 +43,7 @@ class StockRepository(private val cacheDao: StockCacheDao) {
         }
     }
 
-    suspend fun fetchAndUpdateAll() {
+    suspend fun fetchAndUpdateAll() = coroutineScope {
         val def1 = async { try { DseApiClient.fetchQuotes() } catch (e: Exception) { null } }
         val def2 = async { try { DseApiClient.fetchFullQuotesHtml() } catch (e: Exception) { null } }
         val def3 = async { try { DseApiClient.fetchHomepage() } catch (e: Exception) { null } }
@@ -100,7 +101,10 @@ class StockRepository(private val cacheDao: StockCacheDao) {
         }
 
         val categoryMap = mutableMapOf<String, String>()
-        listOf(catA to "A", catB to "B", catZ to "Z").forEach { (html, cat) ->
+        val categories = listOf(catA to "A", catB to "B", catZ to "Z")
+        for (pair in categories) {
+            val html = pair.first
+            val cat = pair.second
             if (html != null) {
                 val symbols = QuotesParser.parseFullHtml(html).keys
                 for (sym in symbols) categoryMap[sym] = cat

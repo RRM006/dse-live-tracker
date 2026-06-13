@@ -121,8 +121,9 @@ fun HoldingsScreen(
                         val category = quote?.category
                         val settlementDate = if (stock.buyDate != null && !category.isNullOrEmpty())
                             DateUtils.calculateSettlementDate(stock.buyDate, category) else null
-                        val sellDateError = if (sellDate != null && settlementDate != null) {
-                            val sellLocal = java.time.LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(sellDate), java.time.ZoneId.of("Asia/Dhaka")).toLocalDate()
+                        val currentSellDate = sellDate
+                        val sellDateError = if (currentSellDate != null && settlementDate != null) {
+                            val sellLocal = java.time.LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(currentSellDate), java.time.ZoneId.of("Asia/Dhaka")).toLocalDate()
                             if (sellLocal.isBefore(settlementDate)) settlementDate else null
                         } else null
                         val estValue = sellPrice.toDoubleOrNull()?.times(stock.quantity) ?: 0.0
@@ -173,7 +174,17 @@ fun HoldingsScreen(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { viewModel.confirmSell() }, enabled = sellPrice.toDoubleOrNull() != null && sellDateError == null) {
+                val quote = if (stock != null) stockQuotes[stock.symbol] else null
+                val category = quote?.category
+                val settlementDate = if (stock != null && stock.buyDate != null && !category.isNullOrEmpty())
+                    DateUtils.calculateSettlementDate(stock.buyDate, category) else null
+                val currentSellDate = sellDate
+                val isNotMatured = if (currentSellDate != null && settlementDate != null) {
+                    val sellLocal = java.time.LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(currentSellDate), java.time.ZoneId.of("Asia/Dhaka")).toLocalDate()
+                    sellLocal.isBefore(settlementDate)
+                } else false
+
+                TextButton(onClick = { viewModel.confirmSell() }, enabled = sellPrice.toDoubleOrNull() != null && !isNotMatured) {
                     Text("Sell")
                 }
             },

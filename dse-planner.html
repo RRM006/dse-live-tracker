@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DSE Smart Planner — 60k Taka</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --card: #1c2330;
+    --border: #30363d;
+    --green: #3fb950;
+    --green-dim: #1a3a22;
+    --red: #f85149;
+    --red-dim: #3a1a1a;
+    --yellow: #d29922;
+    --yellow-dim: #2d2208;
+    --blue: #58a6ff;
+    --blue-dim: #0d2149;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --accent: #f0a500;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  header {
+    background: linear-gradient(135deg, #0d1117 0%, #1a2332 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 20px 14px;
+  }
+  .header-top { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  .logo { font-size: 22px; }
+  header h1 { font-size: 18px; font-weight: 700; color: var(--accent); letter-spacing: -0.3px; }
+  header p { color: var(--muted); font-size: 12px; }
+
+  /* LAYOUT */
+  .container { padding: 14px; display: flex; flex-direction: column; gap: 14px; }
+
+  /* CARDS */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+  }
+  .card-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--muted);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* SUMMARY STATS */
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    text-align: center;
+  }
+  .stat-val { font-size: 20px; font-weight: 700; }
+  .stat-label { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .stat.green .stat-val { color: var(--green); }
+  .stat.yellow .stat-val { color: var(--yellow); }
+  .stat.blue .stat-val { color: var(--blue); }
+  .stat.accent .stat-val { color: var(--accent); }
+
+  /* CAPITAL FLOW */
+  .flow-bar-wrap { margin-top: 8px; }
+  .flow-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+  .flow-bar { height: 10px; background: var(--border); border-radius: 5px; overflow: hidden; }
+  .flow-fill { height: 100%; border-radius: 5px; transition: width 0.4s; }
+  .flow-fill.invested { background: linear-gradient(90deg, var(--blue), var(--accent)); }
+  .flow-fill.locked { background: linear-gradient(90deg, var(--yellow), #a06800); }
+  .flow-fill.free { background: linear-gradient(90deg, var(--green), #1d8a35); }
+
+  /* CATEGORY RULES */
+  .cat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .cat-badge {
+    border-radius: 8px;
+    padding: 10px;
+    border: 1px solid;
+  }
+  .cat-badge.ab { background: var(--green-dim); border-color: var(--green); }
+  .cat-badge.z  { background: var(--yellow-dim); border-color: var(--yellow); }
+  .cat-name { font-size: 16px; font-weight: 800; }
+  .cat-badge.ab .cat-name { color: var(--green); }
+  .cat-badge.z  .cat-name { color: var(--yellow); }
+  .cat-rule { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  /* INPUTS */
+  label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 4px; }
+  input[type="number"], input[type="date"], select {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    color: var(--text);
+    font-size: 13px;
+    outline: none;
+  }
+  input:focus, select:focus { border-color: var(--blue); }
+  .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+
+  /* BUTTON */
+  .btn {
+    width: 100%;
+    padding: 11px;
+    border-radius: 7px;
+    border: none;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn-primary { background: var(--accent); color: #0d1117; }
+  .btn-green  { background: var(--green); color: #0d1117; }
+  .btn-red    { background: var(--red); color: #fff; }
+  .btn-sm     { padding: 6px 10px; font-size: 12px; width: auto; }
+
+  /* CALENDAR / SCHEDULE */
+  .week-scroll { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+  .day-card {
+    min-width: 100px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    flex-shrink: 0;
+  }
+  .day-card.today { border-color: var(--accent); }
+  .day-card.holiday { opacity: 0.4; }
+  .day-name { font-size: 11px; color: var(--muted); }
+  .day-date { font-size: 13px; font-weight: 700; margin: 2px 0 6px; }
+  .day-action {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-bottom: 3px;
+    font-weight: 600;
+  }
+  .day-action.buy  { background: var(--blue-dim);  color: var(--blue); }
+  .day-action.sell { background: var(--green-dim); color: var(--green); }
+  .day-action.lock { background: var(--yellow-dim); color: var(--yellow); }
+
+  /* TRADE LOG */
+  .trade-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    margin-bottom: 6px;
+    background: var(--surface);
+  }
+  .trade-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+  .trade-badge.buy  { background: var(--blue-dim);  color: var(--blue); }
+  .trade-badge.sell { background: var(--green-dim); color: var(--green); }
+  .trade-badge.loss { background: var(--red-dim);   color: var(--red); }
+  .trade-info { flex: 1; }
+  .trade-name { font-size: 12px; font-weight: 600; }
+  .trade-meta { font-size: 11px; color: var(--muted); }
+  .trade-amount { font-size: 13px; font-weight: 700; text-align: right; }
+  .trade-amount.profit { color: var(--green); }
+  .trade-amount.loss   { color: var(--red); }
+
+  /* STRATEGY RULES */
+  .rule-item {
+    display: flex;
+    gap: 10px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .rule-item:last-child { border-bottom: none; }
+  .rule-icon { font-size: 18px; flex-shrink: 0; }
+  .rule-text { font-size: 12px; }
+  .rule-text strong { color: var(--text); display: block; margin-bottom: 1px; }
+  .rule-text span { color: var(--muted); }
+
+  /* SETTLE TRACKER */
+  .settle-item {
+    padding: 9px 10px;
+    border-radius: 7px;
+    margin-bottom: 6px;
+    border: 1px solid;
+  }
+  .settle-item.pending { background: var(--yellow-dim); border-color: var(--yellow); }
+  .settle-item.ready   { background: var(--green-dim);  border-color: var(--green); }
+  .settle-top { display: flex; justify-content: space-between; align-items: center; }
+  .settle-stock { font-size: 13px; font-weight: 700; }
+  .settle-date  { font-size: 11px; color: var(--muted); }
+  .settle-bottom { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .status-pill {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+  }
+  .status-pill.pending { background: var(--yellow); color: #000; }
+  .status-pill.ready   { background: var(--green);  color: #000; }
+
+  /* P&L SUMMARY */
+  .pnl-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--border); }
+  .pnl-row:last-child { border-bottom: none; }
+  .pnl-label { font-size: 12px; color: var(--muted); }
+  .pnl-value { font-size: 14px; font-weight: 700; }
+
+  /* ALLOCATION */
+  .alloc-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .alloc-cell {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+  }
+  .alloc-pct { font-size: 20px; font-weight: 800; color: var(--blue); }
+  .alloc-amt { font-size: 13px; font-weight: 600; color: var(--text); }
+  .alloc-label { font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .alloc-cat { font-size: 10px; font-weight: 600; margin-top: 4px; padding: 2px 6px; border-radius: 4px; display: inline-block; }
+  .alloc-cat.ab { background: var(--green-dim); color: var(--green); }
+  .alloc-cat.z  { background: var(--yellow-dim); color: var(--yellow); }
+
+  /* SECTION DIVIDER */
+  .section-divider {
+    display: flex; align-items: center; gap: 8px;
+    margin: 4px 0;
+    color: var(--muted); font-size: 11px;
+  }
+  .section-divider::before, .section-divider::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+
+  /* TABS */
+  .tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+  .tab {
+    padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600;
+    cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--muted);
+    transition: all 0.15s;
+  }
+  .tab.active { background: var(--accent); color: #0d1117; border-color: var(--accent); }
+
+  /* DISCLAIMER */
+  .disclaimer {
+    background: var(--red-dim);
+    border: 1px solid var(--red);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 11px;
+    color: #f8b4b4;
+    line-height: 1.5;
+  }
+
+  /* SCROLL */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <span class="logo">📈</span>
+    <h1>DSE Smart Planner</h1>
+  </div>
+  <p>Settlement-aware daily trading plan · 60,000 Taka capital</p>
+</header>
+
+<div class="container">
+
+  <!-- CAPITAL OVERVIEW -->
+  <div class="card">
+    <div class="card-title">💰 Capital Overview</div>
+    <div class="stats-grid">
+      <div class="stat accent"><div class="stat-val" id="totalCapital">৳60,000</div><div class="stat-label">Total Capital</div></div>
+      <div class="stat blue"><div class="stat-val" id="freeCapital">৳20,000</div><div class="stat-label">Free to Invest</div></div>
+      <div class="stat yellow"><div class="stat-val" id="lockedCapital">৳30,000</div><div class="stat-label">Locked (Settling)</div></div>
+      <div class="stat green"><div class="stat-val" id="bufferCapital">৳10,000</div><div class="stat-label">Safety Buffer</div></div>
+    </div>
+    <div class="flow-bar-wrap" style="margin-top:12px;">
+      <div class="flow-label"><span>Invested</span><span id="pctInvested">50%</span></div>
+      <div class="flow-bar"><div class="flow-fill invested" id="barInvested" style="width:50%"></div></div>
+    </div>
+    <div class="flow-bar-wrap" style="margin-top:6px;">
+      <div class="flow-label"><span>Locked (T+2/T+3)</span><span id="pctLocked">17%</span></div>
+      <div class="flow-bar"><div class="flow-fill locked" id="barLocked" style="width:17%"></div></div>
+    </div>
+    <div class="flow-bar-wrap" style="margin-top:6px;">
+      <div class="flow-label"><span>Ready to use today</span><span id="pctFree">33%</span></div>
+      <div class="flow-bar"><div class="flow-fill free" id="barFree" style="width:33%"></div></div>
+    </div>
+  </div>
+
+  <!-- SETTLEMENT RULES QUICK REF -->
+  <div class="card">
+    <div class="card-title">⏱ Settlement Rules</div>
+    <div class="cat-grid">
+      <div class="cat-badge ab">
+        <div class="cat-name">A / B / N</div>
+        <div class="cat-rule">T+2 settlement</div>
+        <div class="cat-rule" style="color:var(--green);font-weight:600;">Buy Sun → Sell Tue ✓</div>
+      </div>
+      <div class="cat-badge z">
+        <div class="cat-name">Z</div>
+        <div class="cat-rule">T+3 settlement</div>
+        <div class="cat-rule" style="color:var(--yellow);font-weight:600;">Buy Sun → Sell Wed ✓</div>
+      </div>
+    </div>
+    <div style="margin-top:10px;padding:8px;background:var(--surface);border-radius:6px;font-size:11px;color:var(--muted);">
+      ⛔ <strong style="color:var(--text);">Excluded days:</strong> Friday, Saturday, Bank Holidays, DSE Holidays
+    </div>
+  </div>
+
+  <!-- MONTHLY ALLOCATION STRATEGY -->
+  <div class="card">
+    <div class="card-title">🗂 Recommended Capital Split (60k)</div>
+    <div class="alloc-grid">
+      <div class="alloc-cell">
+        <div class="alloc-pct">50%</div>
+        <div class="alloc-amt">৳30,000</div>
+        <div class="alloc-label">Cat A/B Fast Trades</div>
+        <div class="alloc-cat ab">T+2</div>
+      </div>
+      <div class="alloc-cell">
+        <div class="alloc-pct">33%</div>
+        <div class="alloc-amt">৳20,000</div>
+        <div class="alloc-label">Cat Z Value Holds</div>
+        <div class="alloc-cat z">T+3</div>
+      </div>
+      <div class="alloc-cell">
+        <div class="alloc-pct">17%</div>
+        <div class="alloc-amt">৳10,000</div>
+        <div class="alloc-label">Emergency Buffer</div>
+        <div class="alloc-cat ab" style="background:var(--blue-dim);color:var(--blue);">SAFE</div>
+      </div>
+    </div>
+    <div style="margin-top:10px;font-size:11px;color:var(--muted);">
+      💡 Buffer ensures you always have cash if a buy opportunity appears while other trades are settling.
+    </div>
+  </div>
+
+  <!-- WEEKLY ROTATION PLAN -->
+  <div class="card">
+    <div class="card-title">📅 Weekly Rotation Plan</div>
+    <div style="margin-bottom:10px;font-size:11px;color:var(--muted);">Scroll sideways → see Sun–Thu cycle</div>
+    <div class="week-scroll" id="weekScroll">
+      <!-- filled by JS -->
+    </div>
+  </div>
+
+  <!-- SETTLEMENT TRACKER -->
+  <div class="card">
+    <div class="card-title">🔒 Active Settlement Tracker</div>
+    <div id="settleTracker">
+      <div class="settle-item ready">
+        <div class="settle-top">
+          <div class="settle-stock">SQUARE PHARMA <span style="font-size:10px;color:var(--green);">Cat A</span></div>
+          <span class="status-pill ready">READY TO SELL</span>
+        </div>
+        <div class="settle-bottom">Bought: Sun Jun 8 · Settled: Tue Jun 10 · Amount: ৳8,000</div>
+      </div>
+      <div class="settle-item pending">
+        <div class="settle-top">
+          <div class="settle-stock">BEXIMCO <span style="font-size:10px;color:var(--yellow);">Cat Z</span></div>
+          <span class="status-pill pending">SETTLING</span>
+        </div>
+        <div class="settle-bottom">Bought: Wed Jun 11 · Settles: Mon Jun 16 · Amount: ৳5,000</div>
+      </div>
+      <div class="settle-item pending">
+        <div class="settle-top">
+          <div class="settle-stock">GRAMEENPHONE <span style="font-size:10px;color:var(--green);">Cat A</span></div>
+          <span class="status-pill pending">SETTLING</span>
+        </div>
+        <div class="settle-bottom">Bought: Thu Jun 12 · Settles: Mon Jun 16 · Amount: ৳7,000</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOG A TRADE -->
+  <div class="card">
+    <div class="card-title">➕ Log a Trade</div>
+    <div class="input-row">
+      <div>
+        <label>Stock Name</label>
+        <input type="text" id="stockName" placeholder="e.g. SQUARE PHARMA" style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;">
+      </div>
+      <div>
+        <label>Category</label>
+        <select id="tradeCategory">
+          <option value="AB">A / B / N (T+2)</option>
+          <option value="Z">Z (T+3)</option>
+        </select>
+      </div>
+    </div>
+    <div class="input-row">
+      <div>
+        <label>Amount (৳)</label>
+        <input type="number" id="tradeAmount" placeholder="e.g. 8000" min="100">
+      </div>
+      <div>
+        <label>Buy Date</label>
+        <input type="date" id="tradeDate">
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="logTrade()">📌 Add to Tracker</button>
+    <div id="settleCalc" style="margin-top:10px;display:none;padding:10px;background:var(--surface);border-radius:6px;font-size:12px;"></div>
+  </div>
+
+  <!-- STRATEGY RULES -->
+  <div class="card">
+    <div class="card-title">📐 Your Profit/Loss Strategy</div>
+    <div class="rule-item">
+      <div class="rule-icon">🎯</div>
+      <div class="rule-text">
+        <strong>Take Profit Target: ৳300–1,000+ per trade</strong>
+        <span>When a stock hits your profit goal, sell immediately. Don't wait for more.</span>
+      </div>
+    </div>
+    <div class="rule-item">
+      <div class="rule-icon">🛑</div>
+      <div class="rule-text">
+        <strong>Stop Loss: ৳100–200 max loss per trade</strong>
+        <span>If a stock drops and your loss hits ৳100–200, exit. Never let a small loss become a big one.</span>
+      </div>
+    </div>
+    <div class="rule-item">
+      <div class="rule-icon">🔄</div>
+      <div class="rule-text">
+        <strong>Rotate daily — don't hold idle cash</strong>
+        <span>When one trade settles, immediately reinvest. Idle cash earns nothing.</span>
+      </div>
+    </div>
+    <div class="rule-item">
+      <div class="rule-icon">📊</div>
+      <div class="rule-text">
+        <strong>Diversify across 3–5 sectors at a time</strong>
+        <span>Bank, Pharma, Telecom, Cement, Textile — spread your risk.</span>
+      </div>
+    </div>
+    <div class="rule-item">
+      <div class="rule-icon">💼</div>
+      <div class="rule-text">
+        <strong>Never invest your buffer (৳10,000)</strong>
+        <span>This protects you from forced selling during a bad streak.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- P&L SIMULATOR -->
+  <div class="card">
+    <div class="card-title">📊 Monthly P&L Simulator</div>
+    <div class="input-row">
+      <div>
+        <label>Trades per month</label>
+        <input type="number" id="numTrades" value="20" min="1" max="80">
+      </div>
+      <div>
+        <label>Win rate (%)</label>
+        <input type="number" id="winRate" value="60" min="1" max="99">
+      </div>
+    </div>
+    <div class="input-row">
+      <div>
+        <label>Avg profit per win (৳)</label>
+        <input type="number" id="avgWin" value="500" min="100">
+      </div>
+      <div>
+        <label>Avg loss per loss (৳)</label>
+        <input type="number" id="avgLoss" value="150" min="50">
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="simulate()" style="margin-bottom:12px;">🧮 Simulate</button>
+    <div id="simResult" style="display:none;">
+      <div class="pnl-row"><div class="pnl-label">Winning trades</div><div class="pnl-value" id="simWins" style="color:var(--green)"></div></div>
+      <div class="pnl-row"><div class="pnl-label">Losing trades</div><div class="pnl-value" id="simLosses" style="color:var(--red)"></div></div>
+      <div class="pnl-row"><div class="pnl-label">Gross Profit</div><div class="pnl-value" id="simGross" style="color:var(--green)"></div></div>
+      <div class="pnl-row"><div class="pnl-label">Gross Loss</div><div class="pnl-value" id="simGrossLoss" style="color:var(--red)"></div></div>
+      <div class="pnl-row" style="border-top:2px solid var(--border);margin-top:4px;padding-top:8px;">
+        <div class="pnl-label" style="font-weight:700;color:var(--text);">Net Monthly Profit</div>
+        <div class="pnl-value" id="simNet"></div>
+      </div>
+      <div class="pnl-row"><div class="pnl-label">Return on Capital</div><div class="pnl-value" id="simRoC" style="color:var(--blue)"></div></div>
+      <div id="simAdvice" style="margin-top:10px;font-size:11px;padding:8px;border-radius:6px;"></div>
+    </div>
+  </div>
+
+  <!-- SECTOR DIVERSIFICATION -->
+  <div class="card">
+    <div class="card-title">🏭 Suggested Sector Mix</div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:12px;">🏦 Banking (A/B)</span>
+        <span style="font-size:12px;color:var(--blue);font-weight:700;">৳15,000 · 25%</span>
+      </div>
+      <div style="height:6px;background:var(--border);border-radius:3px;"><div style="width:25%;height:100%;background:var(--blue);border-radius:3px;"></div></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:12px;">💊 Pharma (A)</span>
+        <span style="font-size:12px;color:var(--green);font-weight:700;">৳15,000 · 25%</span>
+      </div>
+      <div style="height:6px;background:var(--border);border-radius:3px;"><div style="width:25%;height:100%;background:var(--green);border-radius:3px;"></div></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:12px;">📡 Telecom (A)</span>
+        <span style="font-size:12px;color:var(--accent);font-weight:700;">৳10,000 · 17%</span>
+      </div>
+      <div style="height:6px;background:var(--border);border-radius:3px;"><div style="width:17%;height:100%;background:var(--accent);border-radius:3px;"></div></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:12px;">🧱 Cement / Textile (Z)</span>
+        <span style="font-size:12px;color:var(--yellow);font-weight:700;">৳10,000 · 17%</span>
+      </div>
+      <div style="height:6px;background:var(--border);border-radius:3px;"><div style="width:17%;height:100%;background:var(--yellow);border-radius:3px;"></div></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:12px;">🛡 Buffer (never invest)</span>
+        <span style="font-size:12px;color:var(--muted);font-weight:700;">৳10,000 · 17%</span>
+      </div>
+      <div style="height:6px;background:var(--border);border-radius:3px;"><div style="width:17%;height:100%;background:var(--border);border-radius:3px;"></div></div>
+    </div>
+  </div>
+
+  <!-- DISCLAIMER -->
+  <div class="disclaimer">
+    ⚠️ <strong>Educational tool only.</strong> This planner does not guarantee profit. DSE investments carry real financial risk. Always do your own research, check DSE announcements, and consider consulting a licensed broker. Past settlement patterns do not guarantee future market behaviour.
+  </div>
+
+  <div style="height:16px;"></div>
+</div>
+
+<script>
+// ─── SETTLEMENT DATE CALCULATOR ─────────────────────────
+function isWorkingDay(date) {
+  const d = date.getDay(); // 0=Sun,1=Mon,...,6=Sat
+  return d !== 5 && d !== 6; // DSE closed Fri(5) & Sat(6)
+}
+function addWorkingDays(startDate, n) {
+  let d = new Date(startDate);
+  let added = 0;
+  while (added < n) {
+    d.setDate(d.getDate() + 1);
+    if (isWorkingDay(d)) added++;
+  }
+  return d;
+}
+const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function fmt(date) {
+  return `${DAY_NAMES[date.getDay()]} ${date.getDate()} ${MONTH_NAMES[date.getMonth()]}`;
+}
+
+// ─── WEEKLY SCHEDULE ─────────────────────────────────────
+function buildWeek() {
+  const wrap = document.getElementById('weekScroll');
+  wrap.innerHTML = '';
+  const today = new Date();
+  const days = [];
+  let d = new Date(today);
+  // go back to find last Sunday
+  while (d.getDay() !== 0) d.setDate(d.getDate() - 1);
+  // build Sun-Thu (5 working days)
+  let count = 0;
+  while (count < 5) {
+    if (isWorkingDay(d)) {
+      days.push(new Date(d));
+      count++;
+    }
+    d.setDate(d.getDate() + 1);
+  }
+
+  days.forEach((day, i) => {
+    const isToday = day.toDateString() === today.toDateString();
+    const card = document.createElement('div');
+    card.className = 'day-card' + (isToday ? ' today' : '');
+
+    const settleAB = addWorkingDays(day, 2);
+    const settleZ  = addWorkingDays(day, 3);
+
+    card.innerHTML = `
+      <div class="day-name">${DAY_NAMES[day.getDay()]}${isToday ? ' ← TODAY' : ''}</div>
+      <div class="day-date">${day.getDate()} ${MONTH_NAMES[day.getMonth()]}</div>
+      <div class="day-action buy">BUY A/B/Z</div>
+      <div class="day-action lock">A/B → free ${fmt(settleAB)}</div>
+      <div class="day-action lock" style="background:var(--yellow-dim);color:var(--yellow);">Z → free ${fmt(settleZ)}</div>
+    `;
+    wrap.appendChild(card);
+  });
+}
+buildWeek();
+
+// ─── LOG TRADE ────────────────────────────────────────────
+function logTrade() {
+  const name = document.getElementById('stockName').value.trim();
+  const cat  = document.getElementById('tradeCategory').value;
+  const amt  = parseFloat(document.getElementById('tradeAmount').value);
+  const dateStr = document.getElementById('tradeDate').value;
+  if (!name || !amt || !dateStr) { alert('Please fill all fields!'); return; }
+
+  const buyDate = new Date(dateStr);
+  const n = cat === 'Z' ? 3 : 2;
+  const settleDate = addWorkingDays(buyDate, n);
+  const calcDiv = document.getElementById('settleCalc');
+  calcDiv.style.display = 'block';
+  calcDiv.innerHTML = `
+    <strong style="color:var(--green);">✅ ${name} logged!</strong><br>
+    Bought: ${fmt(buyDate)} &nbsp;|&nbsp; Category: <strong>${cat === 'Z' ? 'Z (T+3)' : 'A/B (T+2)'}</strong><br>
+    Amount: <strong style="color:var(--accent);">৳${amt.toLocaleString()}</strong><br>
+    <strong>Earliest sell date: <span style="color:var(--yellow);">${fmt(settleDate)}</span></strong>
+  `;
+
+  // Add to settlement tracker
+  const tracker = document.getElementById('settleTracker');
+  const item = document.createElement('div');
+  item.className = 'settle-item pending';
+  item.innerHTML = `
+    <div class="settle-top">
+      <div class="settle-stock">${name} <span style="font-size:10px;color:${cat==='Z'?'var(--yellow)':'var(--green)'};">Cat ${cat==='Z'?'Z':'A/B'}</span></div>
+      <span class="status-pill pending">SETTLING</span>
+    </div>
+    <div class="settle-bottom">Bought: ${fmt(buyDate)} · Settles: ${fmt(settleDate)} · Amount: ৳${amt.toLocaleString()}</div>
+  `;
+  tracker.prepend(item);
+  document.getElementById('stockName').value = '';
+  document.getElementById('tradeAmount').value = '';
+}
+
+// ─── SIMULATOR ───────────────────────────────────────────
+function simulate() {
+  const n     = parseInt(document.getElementById('numTrades').value) || 20;
+  const wr    = parseFloat(document.getElementById('winRate').value) / 100;
+  const win   = parseFloat(document.getElementById('avgWin').value);
+  const loss  = parseFloat(document.getElementById('avgLoss').value);
+
+  const wins   = Math.round(n * wr);
+  const losses = n - wins;
+  const gross  = wins * win;
+  const gloss  = losses * loss;
+  const net    = gross - gloss;
+  const roc    = ((net / 60000) * 100).toFixed(1);
+
+  document.getElementById('simResult').style.display = 'block';
+  document.getElementById('simWins').textContent = wins;
+  document.getElementById('simLosses').textContent = losses;
+  document.getElementById('simGross').textContent = '৳' + gross.toLocaleString();
+  document.getElementById('simGrossLoss').textContent = '৳' + gloss.toLocaleString();
+  document.getElementById('simNet').textContent = '৳' + net.toLocaleString();
+  document.getElementById('simNet').style.color = net >= 0 ? 'var(--green)' : 'var(--red)';
+  document.getElementById('simRoC').textContent = roc + '%';
+
+  const advice = document.getElementById('simAdvice');
+  if (net > 0) {
+    advice.style.background = 'var(--green-dim)';
+    advice.style.color = 'var(--green)';
+    advice.textContent = `✅ With a ${(wr*100).toFixed(0)}% win rate and ${(win/loss).toFixed(1)}x reward/risk ratio, this plan is profitable. Stick to your stop loss!`;
+  } else {
+    advice.style.background = 'var(--red-dim)';
+    advice.style.color = 'var(--red)';
+    advice.textContent = `⚠️ This scenario loses money. Try improving win rate or increasing profit target vs loss limit.`;
+  }
+}
+simulate(); // run on load
+
+// ─── SET TODAY DATE DEFAULT ───────────────────────────────
+const today = new Date();
+const y = today.getFullYear();
+const m = String(today.getMonth()+1).padStart(2,'0');
+const dd = String(today.getDate()).padStart(2,'0');
+document.getElementById('tradeDate').value = `${y}-${m}-${dd}`;
+</script>
+</body>
+</html>

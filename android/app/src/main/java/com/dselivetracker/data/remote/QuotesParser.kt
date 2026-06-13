@@ -124,18 +124,21 @@ object QuotesParser {
         val result = mutableMapOf<String, StockQuoteFull>()
         for (row in rows) {
             val cells = row.select("td")
-            if (cells.size >= 9) {
+            if (cells.size >= 11) {
                 val symbol = cells[1].text().trim().uppercase()
                 if (symbol.isNotEmpty()) {
+                    val ltp = cells[2].text().replace(",", "").toDoubleOrNull() ?: 0.0
+                    val ycp = cells[6].text().replace(",", "").toDoubleOrNull() ?: 0.0
+                    val pctChange = if (ycp > 0) ((ltp - ycp) / ycp) * 100 else 0.0
                     result[symbol] = StockQuoteFull(
                         symbol = symbol,
-                        ltp = cells[2].text().replace(",", "").toDoubleOrNull() ?: 0.0,
+                        ltp = ltp,
                         high = cells[3].text().replace(",", "").toDoubleOrNull() ?: 0.0,
                         low = cells[4].text().replace(",", "").toDoubleOrNull() ?: 0.0,
                         closep = cells[5].text().replace(",", "").toDoubleOrNull() ?: 0.0,
-                        ycp = cells[6].text().replace(",", "").toDoubleOrNull() ?: 0.0,
+                        ycp = ycp,
                         change = cells[7].text().replace(",", "").toDoubleOrNull() ?: 0.0,
-                        pctChange = cells[8].text().replace(",", "").replace("%", "").toDoubleOrNull() ?: 0.0
+                        pctChange = pctChange
                     )
                 }
             }

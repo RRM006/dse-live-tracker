@@ -14,6 +14,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 
 class StockRepository(private val cacheDao: StockCacheDao) {
     private val scope = CoroutineScope(Dispatchers.IO)
@@ -44,92 +45,100 @@ class StockRepository(private val cacheDao: StockCacheDao) {
     }
 
     suspend fun fetchAndUpdateAll() = coroutineScope {
-        val def1 = async { try { DseApiClient.fetchQuotes() } catch (e: Exception) { null } }
-        val def2 = async { try { DseApiClient.fetchFullQuotesHtml() } catch (e: Exception) { null } }
-        val def3 = async { try { DseApiClient.fetchHomepage() } catch (e: Exception) { null } }
-        val def4 = async { try { DseApiClient.fetchCbul() } catch (e: Exception) { null } }
-        val def5 = async { try { DseApiClient.fetchTop20() } catch (e: Exception) { null } }
-        val defA = async { try { DseApiClient.fetchCategoryPage("A") } catch (e: Exception) { null } }
-        val defB = async { try { DseApiClient.fetchCategoryPage("B") } catch (e: Exception) { null } }
-        val defZ = async { try { DseApiClient.fetchCategoryPage("Z") } catch (e: Exception) { null } }
+        val byLtpHtml = async { try { DseApiClient.fetchByLtpHtml() } catch (_: Exception) { null } }
+        val defScroll = async { try { DseApiClient.fetchFullQuotesHtml() } catch (_: Exception) { null } }
+        val defHomepage = async { try { DseApiClient.fetchHomepage() } catch (_: Exception) { null } }
+        val defCbul = async { try { DseApiClient.fetchCbul() } catch (_: Exception) { null } }
+        val defTop20 = async { try { DseApiClient.fetchTop20() } catch (_: Exception) { null } }
+        val defA = async { try { DseApiClient.fetchCategoryPage("A") } catch (_: Exception) { null } }
+        val defB = async { try { DseApiClient.fetchCategoryPage("B") } catch (_: Exception) { null } }
+        val defZ = async { try { DseApiClient.fetchCategoryPage("Z") } catch (_: Exception) { null } }
+        val defQuotes = async { try { DseApiClient.fetchQuotes() } catch (_: Exception) { null } }
 
-        val results = listOf(def1, def2, def3, def4, def5, defA, defB, defZ).awaitAll()
-        val text1 = results[0]
-        val html2 = results[1]
-        val homepage = results[2]
-        val cbulHtml = results[3]
-        val top20Html = results[4]
-        val catA = results[5]
-        val catB = results[6]
-        val catZ = results[7]
+        try {
+            withTimeout(30_000L) {
+                val results = listOf(byLtpHtml, defScroll, defHomepage, defCbul, defTop20, defA, defB, defZ, defQuotes).awaitAll()
+                val htmlByLtp = results[0]
+                val htmlScroll = results[1]
+                val homepage = results[2]
+                val cbulHtml = results[3]
+                val top20Html = results[4]
+                val catA = results[5]
+                val catB = results[6]
+                val catZ = results[7]
+                val textQuotes = results[8]
 
-        val merged = mutableMapOf<String, StockQuoteFull>()
+                val merged = mutableMapOf<String, StockQuoteFull>()
 
-        if (homepage != null) {
-            val parsed = QuotesParser.parseMarketStatus(homepage)
-            if (parsed != null) _marketStatus.value = parsed
-        }
+                if (homepage != null) {
+                    val parsed = QuotesParser.parseMarketStatus(homepage)
+                    if (parsed != null) _marketStatus.value = parsed
+                }
 
-        if (html2 != null) {
-            val fullData = QuotesParser.parseFullHtml(html2)
-            merged.putAll(fullData)
-        }
+                val fullHtml = htmlByLtp ?: htmlScroll
+                if (fullHtml != null) {
+                    val fullData = QuotesParser.parseFullHtml(fullHtml)
+                    merged.putAll(fullData)
+                }
 
-        if (text1 != null) {
-            val basic = QuotesParser.parse(text1)
-            for (quote in basic.quotes) {
-                val existing = merged[quote.symbol]
-                if (existing == null || existing.ltp == 0.0) {
-                    merged[quote.symbol] = StockQuoteFull(
-                        symbol = quote.symbol, ltp = quote.ltp,
-                        high = existing?.high ?: 0.0, low = existing?.low ?: 0.0,
-                        closep = existing?.closep ?: 0.0, ycp = existing?.ycp ?: 0.0,
-                        change = existing?.change ?: 0.0, pctChange = existing?.pctChange ?: 0.0
-                    )
+                if (textQuotes != null) {
+                    val basic = QuotesParser.parse(textQuotes)
+                    for (quote in basic.quotes) {
+                        val existing = merged[quote.symbol]
+                        if (existing == null || existing.ltp == 0.0) {
+                            merged[quote.symbol] = StockQuoteFull(
+                                symbol = quote.symbol, ltp = quote.ltp,
+                                high = existing?.high ?: 0.0, low = existing?.low ?: 0.0,
+                                closep = existing?.closep ?: 0.0, ycp = existing?.ycp ?: 0.0,
+                                change = existing?.change ?: 0.0, pctChange = existing?.pctChange ?: 0.0
+                            )
+                        }
+                    }
+                }
+
+                val cbMap = if (cbulHtml != null) QuotesParser.parseCbulHtml(cbulHtml) else emptyMap()
+                for ((symbol, limits) in cbMap) {
+                    val existing = merged[symbol]
+                    if (existing != null) {
+                        merged[symbol] = existing.copy(upperLimit = limits.first, lowerLimit = limits.second)
+                    } else {
+                        merged[symbol] = StockQuoteFull(symbol = symbol, ltp = 0.0, high = 0.0, low = 0.0, closep = 0.0, ycp = 0.0, change = 0.0, pctChange = 0.0, upperLimit = limits.first, lowerLimit = limits.second)
+                    }
+                }
+
+                val categoryMap = mutableMapOf<String, String>()
+                val categories = listOf(catA to "A", catB to "B", catZ to "Z")
+                for (pair in categories) {
+                    val html = pair.first
+                    val cat = pair.second
+                    if (html != null) {
+                        val symbols = QuotesParser.parseFullHtml(html).keys
+                        for (sym in symbols) categoryMap[sym] = cat
+                    }
+                }
+                for ((symbol, cat) in categoryMap) {
+                    merged[symbol] = merged[symbol]?.copy(category = cat) ?: StockQuoteFull(symbol = symbol, ltp = 0.0, high = 0.0, low = 0.0, closep = 0.0, ycp = 0.0, change = 0.0, pctChange = 0.0, category = cat)
+                }
+
+                if (top20Html != null) {
+                    _top20.value = QuotesParser.parseTop20Html(top20Html)
+                }
+
+                if (merged.isNotEmpty()) {
+                    _allStocks.value = merged
+                    val entities = merged.map { (symbol, q) ->
+                        StockCacheEntity(
+                            symbol = symbol, ltp = q.ltp, high = q.high, low = q.low,
+                            closep = q.closep, ycp = q.ycp, change = q.change, pctChange = q.pctChange,
+                            upperLimit = q.upperLimit, lowerLimit = q.lowerLimit, category = q.category,
+                            lastUpdated = System.currentTimeMillis()
+                        )
+                    }
+                    cacheDao.clearAll()
+                    cacheDao.insertAll(entities)
                 }
             }
-        }
-
-        val cbMap = if (cbulHtml != null) QuotesParser.parseCbulHtml(cbulHtml) else emptyMap()
-        for ((symbol, limits) in cbMap) {
-            val existing = merged[symbol]
-            if (existing != null) {
-                merged[symbol] = existing.copy(upperLimit = limits.first, lowerLimit = limits.second)
-            } else {
-                merged[symbol] = StockQuoteFull(symbol = symbol, ltp = 0.0, high = 0.0, low = 0.0, closep = 0.0, ycp = 0.0, change = 0.0, pctChange = 0.0, upperLimit = limits.first, lowerLimit = limits.second)
-            }
-        }
-
-        val categoryMap = mutableMapOf<String, String>()
-        val categories = listOf(catA to "A", catB to "B", catZ to "Z")
-        for (pair in categories) {
-            val html = pair.first
-            val cat = pair.second
-            if (html != null) {
-                val symbols = QuotesParser.parseFullHtml(html).keys
-                for (sym in symbols) categoryMap[sym] = cat
-            }
-        }
-        for ((symbol, cat) in categoryMap) {
-            merged[symbol] = merged[symbol]?.copy(category = cat) ?: StockQuoteFull(symbol = symbol, ltp = 0.0, high = 0.0, low = 0.0, closep = 0.0, ycp = 0.0, change = 0.0, pctChange = 0.0, category = cat)
-        }
-
-        if (top20Html != null) {
-            _top20.value = QuotesParser.parseTop20Html(top20Html)
-        }
-
-        if (merged.isNotEmpty()) {
-            _allStocks.value = merged
-            val entities = merged.map { (symbol, q) ->
-                StockCacheEntity(
-                    symbol = symbol, ltp = q.ltp, high = q.high, low = q.low,
-                    closep = q.closep, ycp = q.ycp, change = q.change, pctChange = q.pctChange,
-                    upperLimit = q.upperLimit, lowerLimit = q.lowerLimit, category = q.category,
-                    lastUpdated = System.currentTimeMillis()
-                )
-            }
-            cacheDao.clearAll()
-            cacheDao.insertAll(entities)
+        } catch (_: kotlinx.coroutines.TimeoutCancellationException) {
         }
     }
 

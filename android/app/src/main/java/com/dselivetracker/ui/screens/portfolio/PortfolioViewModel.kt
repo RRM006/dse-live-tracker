@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import com.dselivetracker.utils.DateUtils
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -136,6 +137,10 @@ class PortfolioViewModel(application: Application) : AndroidViewModel(applicatio
         val bp = _buyPrice.value.toDoubleOrNull()
         val qty = _quantity.value.toIntOrNull() ?: 1
         if (sym.isEmpty() || bp == null || bp <= 0) return
+        if (_buyDate.value != null && DateUtils.isFutureDate(_buyDate.value!!)) {
+            _error.value = "Buy date cannot be in the future"
+            return
+        }
         viewModelScope.launch {
             val existing = portfolioRepo.getBySymbol(sym)
             if (existing != null) {
@@ -143,6 +148,10 @@ class PortfolioViewModel(application: Application) : AndroidViewModel(applicatio
                 return@launch
             }
             portfolioRepo.addStock(sym, bp, qty, _buyDate.value)
+            val cached = stockRepo.getBySymbol(sym)
+            if (cached != null) {
+                portfolioRepo.updatePrice(sym, cached.ltp, null)
+            }
             _symbol.value = ""
             _buyPrice.value = ""
             _quantity.value = ""

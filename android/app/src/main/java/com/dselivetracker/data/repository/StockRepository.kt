@@ -114,13 +114,12 @@ class StockRepository(private val cacheDao: StockCacheDao) {
             merged[symbol] = merged[symbol]?.copy(category = cat) ?: StockQuoteFull(symbol = symbol, ltp = 0.0, high = 0.0, low = 0.0, closep = 0.0, ycp = 0.0, change = 0.0, pctChange = 0.0, category = cat)
         }
 
-        _allStocks.value = merged
-
         if (top20Html != null) {
             _top20.value = QuotesParser.parseTop20Html(top20Html)
         }
 
         if (merged.isNotEmpty()) {
+            _allStocks.value = merged
             val entities = merged.map { (symbol, q) ->
                 StockCacheEntity(
                     symbol = symbol, ltp = q.ltp, high = q.high, low = q.low,

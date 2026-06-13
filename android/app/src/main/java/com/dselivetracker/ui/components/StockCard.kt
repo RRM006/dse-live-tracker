@@ -55,7 +55,8 @@ fun StockCard(
     upperLimit: Double? = null,
     lowerLimit: Double? = null,
     category: String? = null,
-    buyDate: Long? = null
+    buyDate: Long? = null,
+    lastUpdated: Long? = null
 ) {
     val pnl = if (lastLtp != null) (lastLtp - buyPrice) * quantity else null
     val pct = if (lastLtp != null && buyPrice > 0) ((lastLtp - buyPrice) / buyPrice) * 100 else null
@@ -124,6 +125,18 @@ fun StockCard(
                                         },
                                         shape = RoundedCornerShape(4.dp)
                                     )
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                        if (buyDate != null && !category.isNullOrEmpty() && DateUtils.isMature(buyDate, category)) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "\u2713 Matured",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier
+                                    .background(ProfitGreen, shape = RoundedCornerShape(4.dp))
                                     .padding(horizontal = 6.dp, vertical = 2.dp)
                             )
                         }
@@ -299,6 +312,15 @@ fun StockCard(
                     style = MaterialTheme.typography.labelSmall,
                     color = ProfitGreen,
                     fontWeight = FontWeight.Bold
+                )
+            }
+            if (lastLtp != null && lastUpdated != null) {
+                val timeStr = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date(lastUpdated))
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "Data: $timeStr",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = TextMuted
                 )
             }
         }

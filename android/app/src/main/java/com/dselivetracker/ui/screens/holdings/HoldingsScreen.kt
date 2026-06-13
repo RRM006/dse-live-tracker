@@ -117,6 +117,14 @@ fun HoldingsScreen(
                         Text(if (sellDate != null) "Sell Date: $dateStr" else "Pick Sell Date")
                     }
                     if (stock != null) {
+                        val quote = stockQuotes[stock.symbol]
+                        val category = quote?.category
+                        val settlementDate = if (stock.buyDate != null && !category.isNullOrEmpty())
+                            DateUtils.calculateSettlementDate(stock.buyDate, category) else null
+                        val sellDateError = if (sellDate != null && settlementDate != null) {
+                            val sellLocal = java.time.LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(sellDate), java.time.ZoneId.of("Asia/Dhaka")).toLocalDate()
+                            if (sellLocal.isBefore(settlementDate)) settlementDate else null
+                        } else null
                         val estValue = sellPrice.toDoubleOrNull()?.times(stock.quantity) ?: 0.0
                         val brokerFee = estValue * 0.004
                         val dseFee = estValue * 0.00025
@@ -152,11 +160,20 @@ fun HoldingsScreen(
                                 color = pnlColor
                             )
                         }
+                        if (sellDateError != null) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Not yet matured! Earliest sell: ${sellDateError.format(java.time.format.DateTimeFormatter.ofPattern("dd MMM yyyy"))}",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
                     }
                 }
             },
             confirmButton = {
-                TextButton(onClick = { viewModel.confirmSell() }, enabled = sellPrice.toDoubleOrNull() != null) {
+                TextButton(onClick = { viewModel.confirmSell() }, enabled = sellPrice.toDoubleOrNull() != null && sellDateError == null) {
                     Text("Sell")
                 }
             },
@@ -334,7 +351,8 @@ fun HoldingsScreen(
                             upperLimit = quote?.upperLimit,
                             lowerLimit = quote?.lowerLimit,
                             category = quote?.category,
-                            buyDate = stock.buyDate
+                            buyDate = stock.buyDate,
+                            lastUpdated = stock.lastUpdated
                         )
                     }
                     item { Spacer(modifier = Modifier.height(8.dp)) }

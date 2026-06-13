@@ -14,8 +14,18 @@ import java.util.concurrent.TimeUnit
 
 object DseApiClient {
     private const val QUOTES_URL = "https://www.dsebd.org/datafile/quotes.txt"
+    private const val QUOTES_URL_HTTP = "http://www.dsebd.org/datafile/quotes.txt"
     private const val PROXY_BASE = "https://corsproxy.io/?"
     private const val FULL_QUOTES_URL = "https://www.dsebd.org/latest_share_price_scroll_l.php"
+    private const val FULL_QUOTES_URL_HTTP = "http://www.dsebd.org/latest_share_price_scroll_l.php"
+    private const val HOME_URL = "https://www.dsebd.org/"
+    private const val HOME_URL_HTTP = "http://www.dsebd.org/"
+    private const val CBUL_URL = "https://www.dsebd.org/cbul.php"
+    private const val CBUL_URL_HTTP = "http://www.dsebd.org/cbul.php"
+    private const val TOP20_URL = "https://www.dsebd.org/top_20_share.php"
+    private const val TOP20_URL_HTTP = "http://www.dsebd.org/top_20_share.php"
+    private const val CATEGORY_URL = "https://www.dsebd.org/latest_share_price_scroll_group.php"
+    private const val CATEGORY_URL_HTTP = "http://www.dsebd.org/latest_share_price_scroll_group.php"
     private const val TIMEOUT_MS = 10000L
     private const val MAX_RETRIES = 2
     private const val RETRY_DELAY_MS = 1500L
@@ -29,6 +39,7 @@ object DseApiClient {
     suspend fun fetchQuotes(): String = withContext(Dispatchers.IO) {
         val urls = listOf(
             QUOTES_URL,
+            QUOTES_URL_HTTP,
             PROXY_BASE + URLEncoder.encode(QUOTES_URL, "UTF-8")
         )
 
@@ -55,6 +66,7 @@ object DseApiClient {
     suspend fun fetchFullQuotesHtml(): String? = withContext(Dispatchers.IO) {
         val urls = listOf(
             FULL_QUOTES_URL,
+            FULL_QUOTES_URL_HTTP,
             PROXY_BASE + URLEncoder.encode(FULL_QUOTES_URL, "UTF-8")
         )
 
@@ -80,8 +92,9 @@ object DseApiClient {
 
     suspend fun fetchHomepage(): String? = withContext(Dispatchers.IO) {
         val urls = listOf(
-            "https://www.dsebd.org/",
-            PROXY_BASE + URLEncoder.encode("https://www.dsebd.org/", "UTF-8")
+            HOME_URL,
+            HOME_URL_HTTP,
+            PROXY_BASE + URLEncoder.encode(HOME_URL, "UTF-8")
         )
         for (url in urls) {
             for (attempt in 0..MAX_RETRIES) {
@@ -115,7 +128,7 @@ object DseApiClient {
     }
 
     suspend fun fetchCbul(): String? = withContext(Dispatchers.IO) {
-        val urls = listOf("https://www.dsebd.org/cbul.php", PROXY_BASE + URLEncoder.encode("https://www.dsebd.org/cbul.php", "UTF-8"))
+        val urls = listOf(CBUL_URL, CBUL_URL_HTTP, PROXY_BASE + URLEncoder.encode(CBUL_URL, "UTF-8"))
         for (url in urls) {
             for (attempt in 0..MAX_RETRIES) {
                 try {
@@ -133,7 +146,7 @@ object DseApiClient {
     }
 
     suspend fun fetchTop20(): String? = withContext(Dispatchers.IO) {
-        val urls = listOf("https://www.dsebd.org/top_20_share.php", PROXY_BASE + URLEncoder.encode("https://www.dsebd.org/top_20_share.php", "UTF-8"))
+        val urls = listOf(TOP20_URL, TOP20_URL_HTTP, PROXY_BASE + URLEncoder.encode(TOP20_URL, "UTF-8"))
         for (url in urls) {
             for (attempt in 0..MAX_RETRIES) {
                 try {
@@ -151,8 +164,10 @@ object DseApiClient {
     }
 
     suspend fun fetchCategoryPage(group: String): String? = withContext(Dispatchers.IO) {
-        val url = "https://www.dsebd.org/latest_share_price_scroll_group.php?group=$group"
-        val urls = listOf(url, PROXY_BASE + URLEncoder.encode(url, "UTF-8"))
+        val groupParam = if (group == "A") "" else "?group=$group"
+        val httpsUrl = "$CATEGORY_URL$groupParam"
+        val httpUrl = "$CATEGORY_URL_HTTP$groupParam"
+        val urls = listOf(httpsUrl, httpUrl, PROXY_BASE + URLEncoder.encode(httpsUrl, "UTF-8"))
         for (u in urls) {
             for (attempt in 0..MAX_RETRIES) {
                 try {

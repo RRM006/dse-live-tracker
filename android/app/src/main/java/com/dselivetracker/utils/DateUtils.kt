@@ -15,7 +15,7 @@ object DateUtils {
     fun calculateSettlementDate(timestamp: Long, category: String): LocalDate? {
         val date = LocalDateTime.ofInstant(Instant.ofEpochMilli(timestamp), bdZone).toLocalDate()
         val workingDays = when (category.uppercase()) {
-            "A", "B" -> 2
+            "A", "B", "N" -> 2
             "Z" -> 3
             else -> return null
         }
@@ -35,8 +35,18 @@ object DateUtils {
         return settlement.format(dateFormatter) + " (${settlement.format(dayFormatter)})"
     }
 
+    fun isMature(buyDate: Long, category: String): Boolean {
+        val settlement = calculateSettlementDate(buyDate, category) ?: return false
+        return !LocalDate.now(bdZone).isBefore(settlement)
+    }
+
     fun formatTimestamp(timestamp: Long): String {
         val date = LocalDateTime.ofInstant(Instant.ofEpochMilli(timestamp), bdZone)
         return date.format(dateFormatter)
+    }
+
+    fun isFutureDate(timestamp: Long): Boolean {
+        val date = LocalDateTime.ofInstant(Instant.ofEpochMilli(timestamp), bdZone).toLocalDate()
+        return date.isAfter(LocalDate.now(bdZone))
     }
 }

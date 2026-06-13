@@ -21,16 +21,29 @@ Monitor live prices, build a portfolio with P&L tracking, set watchlist targets,
 > For detailed extension documentation, see [`docs/extension-readme.md`](docs/extension-readme.md).
 
 ### 2. Android App (`/android`)
-Native Android app built with Kotlin + Jetpack Compose. Same features as the extension, optimized for mobile.
+Native Android app built with Kotlin + Jetpack Compose + Material 3. Same features as the extension, optimized for mobile.
 
 **Key Features:**
-- **Portfolio Summary** — Total invested, current value, live P&L with percentage.
-- **Holdings** — Scrollable sorted list with live P&L per stock. Tap to edit. Remove with 3-second Undo.
-- **Watchlist** — Monitor symbols with optional target prices (green indicator when hit).
-- **Search** — Autocomplete symbol lookup with live LTP, P&L, and percentage.
-- **Extras:** Auto-refresh every 30s, market status indicator, dark mode (follows system), offline cached prices.
+- **Portfolio Summary** — Total invested, current value, live P&L with percentage, realized P&L from sold stocks, commission breakdown (Broker 0.40% + DSE 0.025% + AIT 0.05%), and Capital Gains Tax (15% on profits > 50 lakh).
+- **Holdings** — Scrollable sorted list with live P&L per card. Shows LTP, HIGH, LOW, CLOSEP, YCP, raw CHANGE, and % change. Tap to edit. Sell with date picker and commission breakdown. Remove with 3-second Undo.
+- **Watchlist** — Monitor symbols with optional target prices (green BUY SIGNAL indicator when met). Top "Best to Buy" section. Notification alerts on target hit.
+- **Search** — Autocomplete symbol lookup with live LTP, P&L, and percentage. Edit or add directly to portfolio.
+- **Trade History** — View all sold stocks with buy/sell prices, realized P&L, and commissions.
+- **Extras:** Auto-refresh every 30s, manual refresh, market status indicator, dark mode (follows system), offline cached prices with timestamp.
 
 > For detailed mobile documentation, see [`docs/mobile-readme.md`](docs/mobile-readme.md).
+
+## Data Sources
+
+Stock data is fetched directly from the Dhaka Stock Exchange website. Multiple fallback strategies are used for reliability:
+
+1. **Primary:** `https://www.dsebd.org/latest_share_price_scroll_l.php` (full HTML with LTP, high, low, closep, ycp, change, pctChange)
+2. **Fallback:** `http://www.dsebd.org/latest_share_price_scroll_l.php` (plain HTTP when HTTPS SSL fails)
+3. **Proxy:** `https://corsproxy.io/?https://www.dsebd.org/latest_share_price_scroll_l.php`
+
+Additional sources: `quotes.txt`, `cbul.php` (circuit breakers), `top_20_share.php`, category pages (A/B/Z groups).
+
+No backend server or API key is required. All portfolio/watchlist data is stored locally on your device.
 
 ## Project Structure
 - `src/` - Chrome extension source code

@@ -180,6 +180,10 @@ class SearchViewModel(application: Application) : AndroidViewModel(application) 
                 }
             } else {
                 portfolioRepo.addStock(result.symbol, result.buyPrice, result.quantity)
+                val cached = stockRepo.getBySymbol(result.symbol)
+                if (cached != null) {
+                    portfolioRepo.updatePrice(result.symbol, cached.ltp, null)
+                }
                 _inPortfolio.value = true
             }
         }

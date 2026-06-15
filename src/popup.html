@@ -33,11 +33,15 @@
       <button class="tab" data-view="holdings">Holdings <span id="holdingsBadge" class="tab-badge hidden"></span></button>
       <button class="tab" data-view="watchlist">Watchlist <span id="watchlistBadge" class="tab-badge hidden"></span></button>
       <button class="tab" data-view="search">Search</button>
+      <button class="tab" data-view="top20">Top 20</button>
     </nav>
 
-    <!-- ═══ Portfolio View — Summary + Add Form ═══ -->
+    <!-- ═══ Portfolio View — Summary + Pie Chart + Add Form ═══ -->
     <div id="viewPortfolio" class="view active">
       <div id="wlSummary" class="wl-summary"></div>
+      <div id="pieChartContainer" class="pie-chart-container hidden">
+        <canvas id="pieChart" width="240" height="180"></canvas>
+      </div>
       <div class="portfolio-spacer"></div>
       <div class="wl-add-section">
         <div class="wl-add-title">Add Stock</div>
@@ -52,6 +56,10 @@
         <div class="wl-add-field">
           <label class="wl-add-label" for="addQty">Quantity</label>
           <input type="number" id="addQty" class="input" placeholder="e.g. 100" min="1">
+        </div>
+        <div class="wl-add-field">
+          <label class="wl-add-label" for="addBuyDate">Buy Date (optional)</label>
+          <input type="date" id="addBuyDate" class="input">
         </div>
         <button id="addBtn" class="btn-add">+ Add to Portfolio</button>
       </div>
@@ -71,14 +79,30 @@
         </select>
         <span id="holdingsCount" class="holdings-count"></span>
       </div>
+      <div class="holdings-toolbar">
+        <button id="viewTradeHistoryBtn" class="toolbar-btn">Trade History</button>
+      </div>
       <div id="holdingsContainer" class="holdings-container"></div>
       <div class="holdings-add-section">
         <button id="holdingsAddBtn" class="btn-add">+ Add New Stock</button>
       </div>
     </div>
 
+    <!-- ═══ Trade History View ═══ -->
+    <div id="viewTradeHistory" class="view">
+      <div class="back-bar">
+        <button id="backToHoldingsBtn" class="back-btn">&larr; Back to Holdings</button>
+      </div>
+      <div id="tradeHistoryContainer" class="trade-history-container"></div>
+    </div>
+
     <!-- ═══ Watchlist View ═══ -->
     <div id="viewWatchlist" class="view">
+      <div id="alertBanner" class="alert-banner hidden"></div>
+      <div id="bestToBuySection" class="best-to-buy hidden">
+        <div class="best-to-buy-header">&#9733; Best to Buy</div>
+        <div id="bestToBuyContainer" class="best-to-buy-container"></div>
+      </div>
       <div id="qwContainer" class="watchlist-container"></div>
       <div class="wl-add-section">
         <div class="wl-add-title">Track Stock</div>
@@ -121,7 +145,10 @@
       <div id="errorMsg" class="error-msg hidden"></div>
       <div id="resultCard" class="result-card hidden">
         <div class="result-header">
-          <span class="result-symbol" id="resultSymbol">GP</span>
+          <div class="result-header-left">
+            <span class="result-symbol" id="resultSymbol">GP</span>
+            <span class="result-company" id="resultCompany"></span>
+          </div>
           <span class="result-qty" id="resultQty"></span>
         </div>
         <div class="result-body">
@@ -155,6 +182,10 @@
               </div>
             </div>
           </div>
+          <div class="result-row result-info-row">
+            <span class="result-label">Category</span>
+            <span class="result-value" id="resultCategory"></span>
+          </div>
           <div class="result-divider"></div>
           <div class="result-row result-pnl-row">
             <span class="result-label">Total P/L</span>
@@ -163,6 +194,51 @@
         </div>
         <div class="result-footer">
           <a href="https://www.dsebd.org" target="_blank" class="dse-link">dsebd.org &nearr;</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ Top 20 View ═══ -->
+    <div id="viewTop20" class="view">
+      <div id="top20Container" class="top20-container">
+        <div class="wl-empty">
+          <div class="wl-empty-title">Top 20</div>
+          <div class="wl-empty-sub">Refresh to load data</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ Sell Dialog (Modal) ═══ -->
+    <div id="sellDialogOverlay" class="dialog-overlay hidden">
+      <div class="dialog">
+        <div class="dialog-header">
+          <span class="dialog-title">Sell <span id="sellSymbol"></span></span>
+          <button id="sellDialogClose" class="dialog-close">&#x2715;</button>
+        </div>
+        <div class="dialog-body">
+          <div class="wl-add-field">
+            <label class="wl-add-label" for="sellPrice">Sell Price (BDT)</label>
+            <input type="number" id="sellPrice" class="input" placeholder="e.g. 350" min="0" step="any">
+          </div>
+          <div class="wl-add-field">
+            <label class="wl-add-label" for="sellDate">Sell Date (optional)</label>
+            <input type="date" id="sellDate" class="input">
+          </div>
+          <div id="sellMaturityWarning" class="sell-warning hidden"></div>
+          <div id="sellCommissionBreakdown" class="sell-commission">
+            <div class="sell-comm-row"><span>Broker (0.40%)</span><span id="sellBrokerFee">0.00</span></div>
+            <div class="sell-comm-row"><span>DSE (0.025%)</span><span id="sellDseFee">0.00</span></div>
+            <div class="sell-comm-row"><span>AIT (0.05%)</span><span id="sellAitFee">0.00</span></div>
+            <div class="sell-comm-divider"></div>
+            <div class="sell-comm-row total"><span>Buy Commission</span><span id="sellBuyComm">0.00</span></div>
+            <div class="sell-comm-row total"><span>Sell Commission</span><span id="sellSellComm">0.00</span></div>
+            <div class="sell-comm-row total"><span>Est. Value</span><span id="sellEstValue">0.00</span></div>
+            <div class="sell-comm-row total final"><span>Est. P&amp;L</span><span id="sellEstPnl">0.00</span></div>
+          </div>
+        </div>
+        <div class="dialog-footer">
+          <button id="sellCancelBtn" class="btn-cancel">Cancel</button>
+          <button id="sellConfirmBtn" class="btn-sell">Sell</button>
         </div>
       </div>
     </div>

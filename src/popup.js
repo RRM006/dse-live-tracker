@@ -107,8 +107,6 @@
   const dom = {};
   function cacheDOM() {
     dom.symbol = $('symbol');
-    dom.buyPrice = $('buyPrice');
-    dom.quantity = $('quantity');
     dom.checkBtn = $('checkBtn');
     dom.refreshBtn = $('refreshBtn');
     dom.darkToggle = $('darkToggle');
@@ -127,16 +125,19 @@
     dom.addQty = $('addQty');
     dom.addBuyDate = $('addBuyDate');
     dom.addBtn = $('addBtn');
-    dom.addToWatchlistBtn = $('addToWatchlistBtn');
     dom.resultCard = $('resultCard');
     dom.resultSymbol = $('resultSymbol');
     dom.resultCompany = $('resultCompany');
-    dom.resultQty = $('resultQty');
     dom.resultLtp = $('resultLtp');
-    dom.resultBuyPrice = $('resultBuyPrice');
-    dom.resultProfit = $('resultProfit');
+    dom.resultClosep = $('resultClosep');
     dom.resultPercent = $('resultPercent');
     dom.resultCategory = $('resultCategory');
+    dom.resultBreaker = $('resultBreaker');
+    dom.resultTickSize = $('resultTickSize');
+    dom.resultOpenAdj = $('resultOpenAdj');
+    dom.resultLowerLimit = $('resultLowerLimit');
+    dom.resultUpperLimit = $('resultUpperLimit');
+    dom.resultCbulSection = $('resultCbulSection');
     dom.loadingContainer = $('loadingContainer');
     dom.errorMsg = $('errorMsg');
     dom.statusText = $('statusText');
@@ -188,13 +189,10 @@
   let tradeHistory = [];
   let autoCompleteCache = [];
   let refreshInterval = null;
-  let lastSymbol = '';
-  let lastBuyPrice = 0;
-  let lastQty = 1;
+  let lastSearchSymbol = '';
   let hasResult = false;
   let isDark = false;
   let sortMode = 'pnl-asc';
-  let isEditingWatchlist = null;
   let undoTimeout = null;
   let pendingRemove = null;
   let stockData = {};
@@ -270,18 +268,11 @@
       handleAutocomplete(dom.symbol.value);
     });
     dom.symbol.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') dom.buyPrice.focus();
+      if (e.key === 'Enter') dom.checkBtn.click();
       if (e.key === 'ArrowDown') moveAutocomplete(1);
       if (e.key === 'ArrowUp') moveAutocomplete(-1);
     });
     dom.symbol.addEventListener('blur', () => setTimeout(hideAutocomplete, 200));
-
-    dom.buyPrice.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') dom.quantity.focus();
-    });
-    dom.quantity.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') dom.checkBtn.click();
-    });
 
     dom.checkBtn.addEventListener('click', onCheckPrice);
 
@@ -302,8 +293,6 @@
     dom.addBuyDate.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') dom.addBtn.click();
     });
-
-    dom.addToWatchlistBtn.addEventListener('click', onAddSearchResultToWatchlist);
 
     dom.qwSymbol.addEventListener('input', () => {
       dom.qwSymbol.value = dom.qwSymbol.value.toUpperCase();
@@ -433,49 +422,9 @@
   }
 
   function clickWatchlistItem(symbol) {
-    const item = watchlist.find(w => w.symbol === symbol);
-    if (!item) return;
-    dom.symbol.value = item.symbol;
-    dom.buyPrice.value = item.buyPrice;
-    dom.quantity.value = item.qty || 1;
-    isEditingWatchlist = symbol;
+    dom.symbol.value = symbol;
     switchView('search');
     onCheckPrice();
-  }
-
-  function onAddSearchResultToWatchlist() {
-    if (!hasResult) return;
-
-    if (isEditingWatchlist) {
-      const item = watchlist.find(w => w.symbol === isEditingWatchlist);
-      if (item) {
-        item.buyPrice = lastBuyPrice;
-        item.qty = lastQty;
-        saveWatchlist();
-        renderSummary();
-        renderHoldings();
-        updateBadges();
-        dom.addToWatchlistBtn.textContent = 'Updated!';
-        dom.addToWatchlistBtn.disabled = true;
-        dom.addToWatchlistBtn.classList.remove('edit-mode');
-        isEditingWatchlist = null;
-      }
-      return;
-    }
-
-    const symbol = lastSymbol;
-    const buyPrice = lastBuyPrice;
-    const qty = lastQty;
-
-    if (watchlist.find(w => w.symbol === symbol)) return;
-
-    watchlist.push({ symbol, buyPrice, qty });
-    saveWatchlist();
-    renderSummary();
-    renderHoldings();
-    updateBadges();
-    dom.addToWatchlistBtn.textContent = 'Added to Portfolio';
-    dom.addToWatchlistBtn.disabled = true;
   }
 
   function promptRemove(symbol) {
@@ -1392,10 +1341,10 @@
 
       if (activeView === 'top20') renderTop20();
 
-      if (hasResult && stockData[lastSymbol]) {
-        const info = stockData[lastSymbol];
+      if (hasResult && stockData[lastSearchSymbol]) {
+        const info = stockData[lastSearchSymbol];
         if (info && info.ltp > 0) {
-          fetchAndRender(lastSymbol, lastBuyPrice, lastQty, true);
+          fetchAndRender(lastSearchSymbol, true);
         }
       }
 
@@ -1416,14 +1365,16 @@
       const rows = doc.querySelectorAll('table tbody tr');
       rows.forEach(row => {
         const cells = row.querySelectorAll('td');
-        if (cells.length >= 5) {
+        if (cells.length >= 7) {
           const symbol = cells[1].textContent.trim().toUpperCase();
           if (!symbol) return;
           data[symbol] = {
             symbol,
-            lower: parseFloat(cells[2].textContent.replace(/,/g, '')) || 0,
-            upper: parseFloat(cells[3].textContent.replace(/,/g, '')) || 0,
-            refPrice: parseFloat(cells[4].textContent.replace(/,/g, '')) || 0
+            breakerPct: parseFloat(cells[2].textContent.replace(/,/g, '')) || 0,
+            tickSize: parseFloat(cells[3].textContent.replace(/,/g, '')) || 0,
+            openAdjPrice: parseFloat(cells[4].textContent.replace(/,/g, '')) || 0,
+            lower: parseFloat(cells[5].textContent.replace(/,/g, '')) || 0,
+            upper: parseFloat(cells[6].textContent.replace(/,/g, '')) || 0
           };
         }
       });
@@ -1472,17 +1423,13 @@
 
   function onCheckPrice() {
     const symbol = dom.symbol.value.trim().toUpperCase();
-    const buyPrice = parseFloat(dom.buyPrice.value);
-    const qty = parseInt(dom.quantity.value) || 1;
-
     if (!symbol) { showError('Please enter a stock symbol'); dom.symbol.focus(); return; }
-    if (isNaN(buyPrice) || buyPrice <= 0) { showError('Please enter a valid buy price'); dom.buyPrice.focus(); return; }
 
     stopAutoRefresh();
-    fetchAndRender(symbol, buyPrice, qty, false);
+    fetchAndRender(symbol, false);
   }
 
-  async function fetchAndRender(symbol, buyPrice, qty, silent) {
+  async function fetchAndRender(symbol, silent) {
     if (!silent) {
       setLoading(true);
     }
@@ -1506,42 +1453,17 @@
         return;
       }
 
-      const ltp = info.ltp;
-      const profitPerShare = ltp - buyPrice;
-      const totalProfit = profitPerShare * qty;
-      const percent = buyPrice > 0 ? (profitPerShare / buyPrice) * 100 : 0;
-
-      lastSymbol = symbol;
-      lastBuyPrice = buyPrice;
-      lastQty = qty;
+      lastSearchSymbol = symbol;
       hasResult = true;
 
       const cat = getCategory(symbol);
-      renderResult({ symbol, ltp, buyPrice, qty, profit: totalProfit, percent, ycp: info.ycp, high: info.high, low: info.low, closep: info.closep, category: cat });
+      const cbul = getCbul(symbol);
+      renderResult({ symbol, ltp: info.ltp, ycp: info.ycp, high: info.high, low: info.low, closep: info.closep, pctChange: info.pctChange, category: cat, cbul });
       updateStatus(info.timestamp || 'just now');
       updateBadge();
 
       if (!silent) {
         setLoading(false);
-
-        const already = watchlist.find(w => w.symbol === symbol);
-
-        if (isEditingWatchlist || already) {
-          dom.addToWatchlistBtn.classList.remove('hidden');
-          if (isEditingWatchlist) {
-            dom.addToWatchlistBtn.classList.add('edit-mode');
-            dom.addToWatchlistBtn.textContent = 'Update in Portfolio';
-            dom.addToWatchlistBtn.disabled = false;
-          } else {
-            dom.addToWatchlistBtn.classList.remove('edit-mode');
-            dom.addToWatchlistBtn.textContent = 'Already in Portfolio';
-            dom.addToWatchlistBtn.disabled = true;
-          }
-        } else {
-          dom.addToWatchlistBtn.classList.add('hidden');
-          isEditingWatchlist = null;
-        }
-
         startAutoRefresh();
       }
     } catch (err) {
@@ -1728,7 +1650,7 @@
           dom.symbol.value = match.symbol;
         }
         hideAutocomplete();
-        if (acActiveInput !== 'watchlist') dom.buyPrice.focus();
+        if (acActiveInput !== 'watchlist') dom.checkBtn.focus();
       });
       div.addEventListener('mouseenter', () => {
         acIndex = idx;
@@ -1771,25 +1693,19 @@
     const name = getStockName(data.symbol);
     dom.resultCompany.textContent = name || '';
     dom.resultCompany.classList.toggle('hidden', !name);
-    dom.resultQty.textContent = '\u00d7 ' + data.qty;
 
     dom.resultLtp.innerHTML = '\u09F3' + formatBDT(data.ltp) + ' <span class="currency">BDT</span>';
-    dom.resultBuyPrice.innerHTML = '\u09F3' + formatBDT(data.buyPrice) + ' <span class="currency">BDT</span>';
 
-    const isProfit = data.profit >= 0;
-    const sign = isProfit ? '+' : '-';
-    const absProfit = Math.abs(data.profit);
-    const colorClass = isProfit ? 'profit-text' : 'loss-text';
-
-    dom.resultProfit.textContent = sign + '\u09F3' + formatBDT(absProfit);
-    dom.resultProfit.innerHTML += ' <span class="currency">BDT</span>';
-    dom.resultProfit.className = 'result-value profit-loss ' + colorClass;
-
-    dom.resultPercent.textContent = sign + Math.abs(data.percent).toFixed(2) + '%';
-    dom.resultPercent.className = 'result-value profit-loss ' + colorClass;
+    const pctChange = data.pctChange || 0;
+    const isProfitPct = pctChange >= 0;
+    dom.resultPercent.textContent = (isProfitPct ? '+' : '') + Math.abs(pctChange).toFixed(2) + '%';
+    dom.resultPercent.className = 'result-value profit-loss ' + (isProfitPct ? 'profit-text' : 'loss-text');
 
     if (dom.resultYcp) {
       dom.resultYcp.innerHTML = '\u09F3' + formatBDT(data.ycp || 0) + ' <span class="currency">BDT</span>';
+    }
+    if (dom.resultClosep) {
+      dom.resultClosep.innerHTML = '\u09F3' + formatBDT(data.closep || 0) + ' <span class="currency">BDT</span>';
     }
     if (dom.resultHigh) {
       dom.resultHigh.innerHTML = '\u09F3' + formatBDT(data.high || 0) + ' <span class="currency">BDT</span>';
@@ -1803,6 +1719,17 @@
     if (dom.resultCategory) {
       const cat = data.category || getCategory(data.symbol);
       dom.resultCategory.textContent = cat || 'N/A';
+    }
+
+    if (data.cbul && dom.resultCbulSection) {
+      dom.resultBreaker.textContent = data.cbul.breakerPct !== undefined ? data.cbul.breakerPct + '%' : '--';
+      dom.resultTickSize.textContent = data.cbul.tickSize !== undefined ? '\u09F3' + formatBDT(data.cbul.tickSize) : '--';
+      dom.resultOpenAdj.textContent = data.cbul.openAdjPrice !== undefined ? '\u09F3' + formatBDT(data.cbul.openAdjPrice) : '--';
+      dom.resultLowerLimit.textContent = data.cbul.lower !== undefined ? '\u09F3' + formatBDT(data.cbul.lower) : '--';
+      dom.resultUpperLimit.textContent = data.cbul.upper !== undefined ? '\u09F3' + formatBDT(data.cbul.upper) : '--';
+      dom.resultCbulSection.classList.remove('hidden');
+    } else if (dom.resultCbulSection) {
+      dom.resultCbulSection.classList.add('hidden');
     }
 
     dom.resultCard.classList.remove('hidden');
@@ -1832,7 +1759,7 @@
     } else {
       dom.loadingContainer.classList.add('hidden');
       dom.checkBtn.disabled = false;
-      dom.checkBtn.textContent = 'Check Price';
+      dom.checkBtn.textContent = 'Look Up';
       dom.refreshBtn.classList.remove('spinning');
     }
   }
@@ -1843,9 +1770,8 @@
     dom.resultCard.classList.add('hidden');
     dom.loadingContainer.classList.add('hidden');
     dom.searchEmpty.classList.add('hidden');
-    dom.addToWatchlistBtn.classList.add('hidden');
     dom.checkBtn.disabled = false;
-    dom.checkBtn.textContent = 'Check Price';
+    dom.checkBtn.textContent = 'Look Up';
   }
 
   function updateStatus(msg) {
@@ -1948,7 +1874,7 @@
         const sym = data.dse_context_symbol;
         if (sym) {
           dom.symbol.value = sym;
-          dom.buyPrice.focus();
+          dom.checkBtn.focus();
           chrome.storage.local.remove('dse_context_symbol');
         }
       });
@@ -1966,7 +1892,7 @@
       } else if (activeView === 'top20') {
         refreshAllData();
       } else if (hasResult) {
-        fetchAndRender(lastSymbol, lastBuyPrice, lastQty, true);
+        fetchAndRender(lastSearchSymbol, true);
       }
     }, AUTO_REFRESH_MS);
   }

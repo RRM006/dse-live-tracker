@@ -125,17 +125,14 @@
           <input type="text" id="symbol" class="input" placeholder="Stock (e.g., GP)" maxlength="20" autocomplete="off" spellcheck="false" aria-label="Stock symbol">
           <div id="autocompleteDropdown" class="autocomplete-dropdown hidden"></div>
         </div>
-        <input type="number" id="buyPrice" class="input" placeholder="Buy price (BDT)" min="0" step="any" aria-label="Buy price">
-        <input type="number" id="quantity" class="input" placeholder="Quantity" min="1" aria-label="Quantity">
-        <button id="checkBtn" class="check-btn">Check Price</button>
-        <button id="addToWatchlistBtn" class="btn-add-watchlist hidden">+ Add to Portfolio</button>
+        <button id="checkBtn" class="check-btn">Look Up</button>
       </div>
       <div id="searchEmpty" class="search-empty">
         <svg class="search-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
           <circle cx="11" cy="11" r="8"/>
           <path d="M21 21l-4.35-4.35"/>
         </svg>
-        <div class="search-empty-title">Enter a stock symbol to check live price</div>
+        <div class="search-empty-title">Enter a stock symbol</div>
         <div class="search-empty-sub">e.g. GP, BRAC, ISLAMI</div>
       </div>
       <div id="loadingContainer" class="loading-container hidden">
@@ -149,7 +146,6 @@
             <span class="result-symbol" id="resultSymbol">GP</span>
             <span class="result-company" id="resultCompany"></span>
           </div>
-          <span class="result-qty" id="resultQty"></span>
         </div>
         <div class="result-body">
           <div class="result-grid">
@@ -163,8 +159,8 @@
                 <span class="result-value" id="resultYcp">0.00 <span class="currency">BDT</span></span>
               </div>
               <div class="result-row">
-                <span class="result-label">Buy Price</span>
-                <span class="result-value" id="resultBuyPrice">0.00 <span class="currency">BDT</span></span>
+                <span class="result-label">Close</span>
+                <span class="result-value" id="resultClosep">0.00 <span class="currency">BDT</span></span>
               </div>
             </div>
             <div class="result-grid-col">
@@ -187,9 +183,15 @@
             <span class="result-value" id="resultCategory"></span>
           </div>
           <div class="result-divider"></div>
-          <div class="result-row result-pnl-row">
-            <span class="result-label">Total P/L</span>
-            <span class="result-value profit-loss" id="resultProfit">+0.00 <span class="currency">BDT</span></span>
+          <div class="result-cbul-section" id="resultCbulSection">
+            <div class="result-cbul-title">Circuit Breaker Info</div>
+            <div class="result-cbul-grid">
+              <div class="result-cbul-row"><span>Breaker %</span><span id="resultBreaker">--</span></div>
+              <div class="result-cbul-row"><span>Tick Size</span><span id="resultTickSize">--</span></div>
+              <div class="result-cbul-row"><span>Open Adj.</span><span id="resultOpenAdj">--</span></div>
+              <div class="result-cbul-row"><span>Lower Limit</span><span id="resultLowerLimit">--</span></div>
+              <div class="result-cbul-row"><span>Upper Limit</span><span id="resultUpperLimit">--</span></div>
+            </div>
           </div>
         </div>
         <div class="result-footer">

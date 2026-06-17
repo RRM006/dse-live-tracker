@@ -15,6 +15,9 @@ data class StockCacheEntity(
     val pctChange: Double = 0.0,
     val upperLimit: Double = 0.0,
     val lowerLimit: Double = 0.0,
+    val breakerPct: Double = 0.0,
+    val tickSize: Double = 0.0,
+    val openAdjPrice: Double = 0.0,
     val category: String = "",
     val lastUpdated: Long = System.currentTimeMillis()
 )

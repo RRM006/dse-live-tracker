@@ -438,6 +438,25 @@ body.dark .btn-add-watchlist:hover { background: rgba(59,130,246,0.1); }
 .result-value .currency { font-weight: 400; color: var(--text-muted); font-size: 12px; margin-left: 2px; }
 .result-divider { height: 1px; background: var(--border-light); margin: 4px 0; }
 .result-pnl-row { margin-top: 2px; }
+
+/* ─── Result CBUL Section ─── */
+.result-cbul-section {
+  margin-top: 4px;
+}
+.result-cbul-title {
+  font-size: 11px; font-weight: 600; color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+.result-cbul-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px;
+}
+.result-cbul-row {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 11px; padding: 2px 0;
+}
+.result-cbul-row span:first-child { color: var(--text-muted); }
+.result-cbul-row span:last-child { font-weight: 600; color: var(--text-primary); }
+
 .profit-loss { font-size: 16px; font-weight: 700; }
 .profit-loss .currency { font-size: 13px; font-weight: 500; }
 

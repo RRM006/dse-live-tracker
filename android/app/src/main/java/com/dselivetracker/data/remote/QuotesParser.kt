@@ -21,21 +21,36 @@ object QuotesParser {
         val pctChange: Double,
         val upperLimit: Double = 0.0,
         val lowerLimit: Double = 0.0,
+        val breakerPct: Double = 0.0,
+        val tickSize: Double = 0.0,
+        val openAdjPrice: Double = 0.0,
         val category: String = ""
     )
 
-    fun parseCbulHtml(html: String): Map<String, Pair<Double, Double>> {
+    data class CbulInfo(
+        val breakerPct: Double = 0.0,
+        val tickSize: Double = 0.0,
+        val openAdjPrice: Double = 0.0,
+        val lowerLimit: Double = 0.0,
+        val upperLimit: Double = 0.0
+    )
+
+    fun parseCbulHtml(html: String): Map<String, CbulInfo> {
         val doc = Jsoup.parse(html)
         val rows = doc.select("table tbody tr")
-        val result = mutableMapOf<String, Pair<Double, Double>>()
+        val result = mutableMapOf<String, CbulInfo>()
         for (row in rows) {
             val cells = row.select("td")
-            if (cells.size >= 3) {
-                val symbol = cells[0].text().trim().uppercase()
-                val ceiling = cells[1].text().replace(",", "").toDoubleOrNull() ?: 0.0
-                val floor = cells[2].text().replace(",", "").toDoubleOrNull() ?: 0.0
-                if (symbol.isNotEmpty() && ceiling > 0) {
-                    result[symbol] = Pair(ceiling, floor)
+            if (cells.size >= 7) {
+                val symbol = cells[1].text().trim().uppercase()
+                if (symbol.isNotEmpty()) {
+                    result[symbol] = CbulInfo(
+                        breakerPct = cells[2].text().replace(",", "").toDoubleOrNull() ?: 0.0,
+                        tickSize = cells[3].text().replace(",", "").toDoubleOrNull() ?: 0.0,
+                        openAdjPrice = cells[4].text().replace(",", "").toDoubleOrNull() ?: 0.0,
+                        lowerLimit = cells[5].text().replace(",", "").toDoubleOrNull() ?: 0.0,
+                        upperLimit = cells[6].text().replace(",", "").toDoubleOrNull() ?: 0.0
+                    )
                 }
             }
         }

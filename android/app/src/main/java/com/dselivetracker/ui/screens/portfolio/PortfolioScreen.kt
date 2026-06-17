@@ -46,7 +46,7 @@ import kotlinx.coroutines.delay
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PortfolioScreen(
-    onNavigateToSearch: (String, String, String) -> Unit = { _, _, _ -> },
+    onNavigateToSearch: (String) -> Unit = {},
     viewModel: PortfolioViewModel = viewModel()
 ) {
     val summary by viewModel.summary.collectAsState()

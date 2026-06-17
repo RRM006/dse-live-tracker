@@ -46,9 +46,9 @@ sealed class Screen(
     data object Holdings : Screen("holdings", "Holdings", Icons.Filled.AccountBalance, Icons.Outlined.AccountBalance)
     data object Watchlist : Screen("watchlist", "Watchlist", Icons.Filled.Star, Icons.Outlined.Star)
     data object Search : Screen("search", "Search", Icons.Filled.Search, Icons.Outlined.Search) {
-        const val ROUTE_PATTERN = "search?s={symbol}&b={buyPrice}&q={quantity}"
-        fun createRoute(symbol: String = "", buyPrice: String = "", quantity: String = ""): String {
-            return "search?s=$symbol&b=$buyPrice&q=$quantity"
+        const val ROUTE_PATTERN = "search?s={symbol}"
+        fun createRoute(symbol: String = ""): String {
+            return "search?s=$symbol"
         }
     }
     data object News : Screen("news", "Top 20", Icons.Filled.Article, Icons.Outlined.Article)
@@ -105,15 +105,15 @@ fun DseNavHost() {
         ) {
             composable(Screen.Portfolio.route) {
                 PortfolioScreen(
-                    onNavigateToSearch = { symbol, buyPrice, qty ->
-                        navController.navigate(Screen.Search.createRoute(symbol, buyPrice, qty))
+                    onNavigateToSearch = { symbol ->
+                        navController.navigate(Screen.Search.createRoute(symbol))
                     }
                 )
             }
             composable(Screen.Holdings.route) {
                 HoldingsScreen(
-                    onNavigateToSearch = { symbol, buyPrice, qty ->
-                        navController.navigate(Screen.Search.createRoute(symbol, buyPrice, qty))
+                    onNavigateToSearch = { symbol ->
+                        navController.navigate(Screen.Search.createRoute(symbol))
                     },
                     onNavigateToTradeHistory = {
                         navController.navigate(Screen.TradeHistory.route)
@@ -134,18 +134,12 @@ fun DseNavHost() {
             composable(
                 route = Screen.Search.ROUTE_PATTERN,
                 arguments = listOf(
-                    navArgument("symbol") { type = NavType.StringType; defaultValue = "" },
-                    navArgument("buyPrice") { type = NavType.StringType; defaultValue = "" },
-                    navArgument("quantity") { type = NavType.StringType; defaultValue = "" }
+                    navArgument("symbol") { type = NavType.StringType; defaultValue = "" }
                 )
             ) { backStackEntry ->
                 val symbol = backStackEntry.arguments?.getString("symbol") ?: ""
-                val buyPrice = backStackEntry.arguments?.getString("buyPrice") ?: ""
-                val quantity = backStackEntry.arguments?.getString("quantity") ?: ""
                 SearchScreen(
-                    initialSymbol = symbol,
-                    initialBuyPrice = buyPrice,
-                    initialQuantity = quantity
+                    initialSymbol = symbol
                 )
             }
         }

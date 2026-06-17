@@ -57,7 +57,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HoldingsScreen(
-    onNavigateToSearch: (String, String, String) -> Unit = { _, _, _ -> },
+    onNavigateToSearch: (String) -> Unit = {},
     onNavigateToTradeHistory: () -> Unit = {},
     viewModel: HoldingsViewModel = viewModel()
 ) {
@@ -348,11 +348,7 @@ fun HoldingsScreen(
                             showSell = true,
                             onSell = { viewModel.showSellDialog(stock.id) },
                             onClick = {
-                                onNavigateToSearch(
-                                    stock.symbol,
-                                    stock.buyPrice.toString(),
-                                    (stock.quantity).toString()
-                                )
+                                onNavigateToSearch(stock.symbol)
                             },
                             ycp = ycpMap[stock.symbol],
                             high = quote?.high,

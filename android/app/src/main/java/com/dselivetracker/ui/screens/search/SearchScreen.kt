@@ -1,6 +1,7 @@
 package com.dselivetracker.ui.screens.search
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -42,7 +43,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -50,8 +50,6 @@ import com.dselivetracker.ui.components.formatBdt
 import com.dselivetracker.ui.theme.DarkHeader
 import com.dselivetracker.ui.theme.LossRed
 import com.dselivetracker.ui.theme.ProfitGreen
-import com.dselivetracker.data.remote.QuotesParser.StockQuoteFull
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Scaffold
 
@@ -59,26 +57,20 @@ import androidx.compose.material3.Scaffold
 @Composable
 fun SearchScreen(
     initialSymbol: String = "",
-    initialBuyPrice: String = "",
-    initialQuantity: String = "",
     viewModel: SearchViewModel = viewModel()
 ) {
     val symbol by viewModel.symbol.collectAsState()
-    val buyPrice by viewModel.buyPrice.collectAsState()
-    val quantity by viewModel.quantity.collectAsState()
     val result by viewModel.result.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
     val autocompleteSuggestions by viewModel.autocompleteSuggestions.collectAsState()
-    val inPortfolio by viewModel.inPortfolio.collectAsState()
-    val isEditingSymbol by viewModel.isEditingSymbol.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val lastUpdated by viewModel.lastUpdated.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(initialSymbol) {
         if (initialSymbol.isNotBlank()) {
-            viewModel.setInitialValues(initialSymbol, initialBuyPrice, initialQuantity)
+            viewModel.updateSymbol(initialSymbol)
         }
     }
 
@@ -136,7 +128,7 @@ fun SearchScreen(
                         placeholder = { Text("e.g. GP") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                         colors = OutlinedTextFieldDefaults.colors()
                     )
                     if (autocompleteSuggestions.isNotEmpty()) {
@@ -158,35 +150,12 @@ fun SearchScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = buyPrice,
-                    onValueChange = { viewModel.updateBuyPrice(it) },
-                    label = { Text("Buy Price (BDT)") },
-                    placeholder = { Text("e.g. 300") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
-                    colors = OutlinedTextFieldDefaults.colors()
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = quantity,
-                    onValueChange = { viewModel.updateQuantity(it) },
-                    label = { Text("Quantity") },
-                    placeholder = { Text("e.g. 100") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = { viewModel.checkPrice() }),
-                    colors = OutlinedTextFieldDefaults.colors()
-                )
                 Spacer(modifier = Modifier.height(12.dp))
                 Button(
                     onClick = { viewModel.checkPrice() },
                     modifier = Modifier.fillMaxWidth().height(42.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                    enabled = !isLoading && symbol.isNotBlank() && buyPrice.isNotBlank()
+                    enabled = !isLoading && symbol.isNotBlank()
                 ) {
                     if (isLoading) {
                         CircularProgressIndicator(
@@ -197,13 +166,13 @@ fun SearchScreen(
                     } else {
                         Icon(Icons.Default.Search, contentDescription = null)
                         Spacer(modifier = Modifier.padding(start = 4.dp))
-                        Text("Check Price")
+                        Text("Look Up")
                     }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                error?.let { 
+                error?.let {
                     Text(
                         text = it,
                         style = MaterialTheme.typography.bodyMedium,
@@ -219,8 +188,8 @@ fun SearchScreen(
                 }
 
                 result?.let { r ->
-                    val isProfit = r.totalPnl >= 0
-                    val sign = if (isProfit) "+" else "-"
+                    val isProfit = r.pctChange >= 0
+                    val sign = if (isProfit) "+" else ""
                     val color = if (isProfit) ProfitGreen else LossRed
 
                     Card(
@@ -229,22 +198,11 @@ fun SearchScreen(
                         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = r.symbol,
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Spacer(modifier = Modifier.weight(1f))
-                                Text(
-                                    text = "\u00d7 ${r.quantity}",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                            Text(
+                                text = r.symbol,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
+                            )
 
                             Spacer(modifier = Modifier.height(12.dp))
 
@@ -256,8 +214,8 @@ fun SearchScreen(
                                     Text("YCP", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     Text("\u09F3${formatBdt(r.ycp)}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
                                     Spacer(modifier = Modifier.height(4.dp))
-                                    Text("Buy Price", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text("\u09F3${formatBdt(r.buyPrice)}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                                    Text("Close", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text("\u09F3${formatBdt(r.closep)}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
                                 }
                                 Spacer(modifier = Modifier.weight(1f))
                                 Column(horizontalAlignment = Alignment.End) {
@@ -269,7 +227,7 @@ fun SearchScreen(
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text("% Change", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     Text(
-                                        "${sign}${"%.2f".format(kotlin.math.abs(r.percent))}%",
+                                        "$sign${"%.2f".format(kotlin.math.abs(r.pctChange))}%",
                                         style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.Bold,
                                         color = color
@@ -277,15 +235,8 @@ fun SearchScreen(
                                 }
                             }
 
-                            if (r.upperLimit > 0) {
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "Circuit: \u09F3${formatBdt(r.lowerLimit)} - \u09F3${formatBdt(r.upperLimit)}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
                             if (r.category.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = "Category: ${r.category}",
                                     style = MaterialTheme.typography.bodySmall,
@@ -293,52 +244,31 @@ fun SearchScreen(
                                 )
                             }
 
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(1.dp)
-                                    .background(MaterialTheme.colorScheme.outline)
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            Row(modifier = Modifier.fillMaxWidth()) {
+                            if (r.upperLimit > 0) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(1.dp)
+                                        .background(MaterialTheme.colorScheme.outline)
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = "Total P/L",
-                                    style = MaterialTheme.typography.bodyMedium,
+                                    text = "Circuit Breaker Info",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
-                                Spacer(modifier = Modifier.weight(1f))
-                                Text(
-                                    text = "$sign\u09F3${formatBdt(kotlin.math.abs(r.totalPnl))} ($sign${"%.2f".format(kotlin.math.abs(r.percent))}%)",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = color
-                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Column {
+                                    CbulRow("Breaker %", "${r.breakerPct}%")
+                                    CbulRow("Tick Size", "\u09F3${formatBdt(r.tickSize)}")
+                                    CbulRow("Open Adj.", "\u09F3${formatBdt(r.openAdjPrice)}")
+                                    CbulRow("Lower Limit", "\u09F3${formatBdt(r.lowerLimit)}")
+                                    CbulRow("Upper Limit", "\u09F3${formatBdt(r.upperLimit)}")
+                                }
                             }
                         }
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    val buttonText = when {
-                        isEditingSymbol != null -> "Update in Portfolio"
-                        inPortfolio -> "Already in Portfolio"
-                        else -> "+ Add to Portfolio"
-                    }
-                    val buttonEnabled = isEditingSymbol != null || !inPortfolio
-
-                    Button(
-                        onClick = { viewModel.addToPortfolio() },
-                        modifier = Modifier.fillMaxWidth().height(42.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (inPortfolio && isEditingSymbol == null)
-                                MaterialTheme.colorScheme.surfaceVariant
-                            else MaterialTheme.colorScheme.primary
-                        ),
-                        enabled = buttonEnabled
-                    ) {
-                        Text(buttonText)
                     }
                 }
 
@@ -357,7 +287,7 @@ fun SearchScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Enter a stock symbol to check live price",
+                            text = "Enter a stock symbol",
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -372,5 +302,25 @@ fun SearchScreen(
                 Spacer(modifier = Modifier.height(16.dp))
             }
         }
+    }
+}
+
+@Composable
+private fun CbulRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
     }
 }

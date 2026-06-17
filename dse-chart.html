@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DSE Buy/Sell Chart</title>
+<style>
+  :root {
+    --bg: #0a0f1a;
+    --surface: #111827;
+    --card: #1a2234;
+    --border: #2d3748;
+    --green: #10b981;
+    --green-bg: #052e1c;
+    --green-border: #065f46;
+    --red: #ef4444;
+    --red-bg: #2d0a0a;
+    --red-border: #7f1d1d;
+    --yellow: #f59e0b;
+    --yellow-bg: #271a02;
+    --yellow-border: #78350f;
+    --blue: #3b82f6;
+    --blue-bg: #0c1f3f;
+    --blue-border: #1e3a8a;
+    --purple: #a855f7;
+    --purple-bg: #1a0a2e;
+    --muted: #6b7280;
+    --text: #f1f5f9;
+    --text2: #94a3b8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  /* HEADER */
+  .header {
+    background: linear-gradient(135deg, #0a0f1a, #1a1040);
+    border-bottom: 2px solid #2d3748;
+    padding: 16px;
+    text-align: center;
+  }
+  .header h1 { font-size: 20px; font-weight: 800; color: #f59e0b; letter-spacing: -0.5px; }
+  .header p  { font-size: 12px; color: var(--text2); margin-top: 3px; }
+
+  .wrap { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+
+  /* LEGEND */
+  .legend { display: flex; gap: 8px; flex-wrap: wrap; }
+  .leg {
+    display: flex; align-items: center; gap: 5px;
+    padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600;
+  }
+  .leg-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .leg.buy   { background: var(--green-bg); border: 1px solid var(--green-border); color: var(--green); }
+  .leg.sell  { background: var(--blue-bg);  border: 1px solid var(--blue-border);  color: var(--blue); }
+  .leg.no    { background: var(--red-bg);   border: 1px solid var(--red-border);   color: var(--red); }
+  .leg.hold  { background: var(--yellow-bg);border: 1px solid var(--yellow-border);color: var(--yellow); }
+
+  /* MAIN CHART GRID */
+  .chart-wrap { overflow-x: auto; }
+  .chart {
+    min-width: 340px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .chart-head {
+    display: grid;
+    grid-template-columns: 90px repeat(5, 1fr);
+    background: #1e2d42;
+    border-bottom: 2px solid var(--border);
+  }
+  .ch-cell {
+    padding: 10px 4px;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text2);
+    border-right: 1px solid var(--border);
+  }
+  .ch-cell:last-child { border-right: none; }
+  .ch-cell .day-bn { color: var(--text); font-size: 12px; display: block; }
+
+  .chart-row {
+    display: grid;
+    grid-template-columns: 90px repeat(5, 1fr);
+    border-bottom: 1px solid var(--border);
+  }
+  .chart-row:last-child { border-bottom: none; }
+  .row-label {
+    padding: 10px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-right: 1px solid var(--border);
+    background: #131c2e;
+  }
+  .row-label .cat { font-size: 14px; font-weight: 800; }
+  .row-label .settle { font-size: 10px; color: var(--muted); }
+
+  .cell {
+    padding: 8px 4px;
+    text-align: center;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-height: 80px;
+  }
+  .cell:last-child { border-right: none; }
+
+  /* CELL TYPES */
+  .cell.buy-cell  { background: var(--green-bg); }
+  .cell.sell-cell { background: var(--blue-bg); }
+  .cell.both-cell { background: linear-gradient(180deg, var(--green-bg) 50%, var(--blue-bg) 50%); }
+  .cell.no-cell   { background: var(--red-bg); }
+  .cell.hold-cell { background: var(--yellow-bg); }
+  .cell.empty     { background: var(--surface); }
+
+  .action-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 7px;
+    border-radius: 4px;
+    width: 100%;
+    max-width: 64px;
+  }
+  .badge-buy  { background: var(--green);  color: #000; }
+  .badge-sell { background: var(--blue);   color: #fff; }
+  .badge-no   { background: var(--red);    color: #fff; }
+  .badge-hold { background: var(--yellow); color: #000; }
+  .badge-opt  { background: #374151; color: var(--text2); }
+
+  .cell-note { font-size: 9px; color: var(--text2); line-height: 1.3; }
+  .cell-note.green { color: var(--green); }
+  .cell-note.blue  { color: var(--blue); }
+  .cell-note.red   { color: var(--red); }
+  .cell-note.yellow{ color: var(--yellow); }
+
+  /* SECTION TITLE */
+  .sec-title {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.8px; color: var(--muted);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .sec-title::after { content:''; flex:1; height:1px; background: var(--border); }
+
+  /* SCENARIO CARDS */
+  .scenario {
+    border-radius: 10px;
+    border: 1px solid;
+    overflow: hidden;
+  }
+  .scenario-head {
+    padding: 10px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .scenario-body { padding: 10px 12px; font-size: 12px; }
+  .scenario.loss { border-color: var(--red-border); }
+  .scenario.loss .scenario-head { background: var(--red-bg); color: var(--red); }
+  .scenario.hold { border-color: var(--yellow-border); }
+  .scenario.hold .scenario-head { background: var(--yellow-bg); color: var(--yellow); }
+  .scenario.profit { border-color: var(--green-border); }
+  .scenario.profit .scenario-head { background: var(--green-bg); color: var(--green); }
+
+  .step { display: flex; gap: 8px; margin-bottom: 6px; align-items: flex-start; }
+  .step-num {
+    width: 20px; height: 20px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 800; flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .step-num.red    { background: var(--red);    color: #fff; }
+  .step-num.yellow { background: var(--yellow); color: #000; }
+  .step-num.green  { background: var(--green);  color: #000; }
+  .step-num.blue   { background: var(--blue);   color: #fff; }
+  .step-text { font-size: 12px; color: var(--text2); line-height: 1.5; }
+  .step-text strong { color: var(--text); }
+
+  /* MONEY FLOW */
+  .money-flow {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .flow-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    border-radius: 7px;
+    border: 1px solid var(--border);
+    background: var(--card);
+  }
+  .flow-day {
+    font-size: 11px; font-weight: 800;
+    width: 28px; text-align: center;
+    color: var(--yellow);
+    flex-shrink: 0;
+  }
+  .flow-actions { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+  .flow-tag {
+    font-size: 10px; font-weight: 600; padding: 2px 6px;
+    border-radius: 3px; display: inline-block; margin-right: 4px;
+  }
+  .ft-buy  { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+  .ft-sell { background: var(--blue-bg);  color: var(--blue);  border: 1px solid var(--blue-border); }
+  .ft-no   { background: var(--red-bg);   color: var(--red);   border: 1px solid var(--red-border); }
+  .ft-hold { background: var(--yellow-bg);color: var(--yellow);border: 1px solid var(--yellow-border); }
+  .flow-money { font-size: 11px; color: var(--muted); }
+
+  /* RULE BOX */
+  .rule-box {
+    border-radius: 8px;
+    padding: 10px 12px;
+    border: 1px solid;
+    margin-bottom: 6px;
+  }
+  .rule-box.green  { background: var(--green-bg);  border-color: var(--green-border); }
+  .rule-box.red    { background: var(--red-bg);    border-color: var(--red-border); }
+  .rule-box.yellow { background: var(--yellow-bg); border-color: var(--yellow-border); }
+  .rule-title { font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+  .rule-title.green  { color: var(--green); }
+  .rule-title.red    { color: var(--red); }
+  .rule-title.yellow { color: var(--yellow); }
+  .rule-body { font-size: 11px; color: var(--text2); line-height: 1.6; }
+
+  /* DISCLAIMER */
+  .disc {
+    background: #1a1212; border: 1px solid #4a1515;
+    border-radius: 8px; padding: 10px 12px;
+    font-size: 11px; color: #f87171; line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📊 DSE Weekly Buy/Sell Master Chart</h1>
+  <p>কোন দিন কোন Category কিনবো / কিনবো না — একনজরে</p>
+</div>
+
+<div class="wrap">
+
+  <!-- LEGEND -->
+  <div class="legend">
+    <div class="leg buy">  <div class="leg-dot" style="background:var(--green)"></div>  কিনবে ✅</div>
+    <div class="leg sell"> <div class="leg-dot" style="background:var(--blue)"></div>   বেচবে 💰</div>
+    <div class="leg no">   <div class="leg-dot" style="background:var(--red)"></div>    কিনবে না ⛔</div>
+    <div class="leg hold"> <div class="leg-dot" style="background:var(--yellow)"></div> ধরে রাখো ⏳</div>
+  </div>
+
+  <!-- MAIN CHART -->
+  <div class="sec-title">মূল চার্ট — কোন দিন কী করবো</div>
+  <div class="chart-wrap">
+    <div class="chart">
+      <!-- HEADER -->
+      <div class="chart-head">
+        <div class="ch-cell">Category</div>
+        <div class="ch-cell"><span class="day-bn">রবি</span>Sun</div>
+        <div class="ch-cell"><span class="day-bn">সোম</span>Mon</div>
+        <div class="ch-cell"><span class="day-bn">মঙ্গল</span>Tue</div>
+        <div class="ch-cell"><span class="day-bn">বুধ</span>Wed</div>
+        <div class="ch-cell"><span class="day-bn">বৃহস্পতি</span>Thu</div>
+      </div>
+
+      <!-- ROW: Category A -->
+      <div class="chart-row">
+        <div class="row-label">
+          <span class="cat" style="color:var(--green)">A / B</span>
+          <span class="settle">T+2 দিনে বেচা যাবে</span>
+        </div>
+        <!-- Sun: BUY -->
+        <div class="cell buy-cell">
+          <span class="action-badge badge-buy">কিনো ✅</span>
+          <span class="cell-note green">মঙ্গলে বেচবে</span>
+        </div>
+        <!-- Mon: BUY -->
+        <div class="cell buy-cell">
+          <span class="action-badge badge-buy">কিনো ✅</span>
+          <span class="cell-note green">বুধে বেচবে</span>
+        </div>
+        <!-- Tue: BUY + SELL -->
+        <div class="cell both-cell">
+          <span class="action-badge badge-sell">বেচো 💰</span>
+          <span class="cell-note blue">(রবির টা)</span>
+          <span class="action-badge badge-buy" style="margin-top:2px">কিনো ✅</span>
+          <span class="cell-note green">বৃহস্পতিতে বেচবে</span>
+        </div>
+        <!-- Wed: BUY + SELL -->
+        <div class="cell both-cell">
+          <span class="action-badge badge-sell">বেচো 💰</span>
+          <span class="cell-note blue">(সোমের টা)</span>
+          <span class="action-badge badge-buy" style="margin-top:2px">কিনো ✅</span>
+          <span class="cell-note green">পরের রবিতে বেচবে</span>
+        </div>
+        <!-- Thu: BUY + SELL -->
+        <div class="cell both-cell">
+          <span class="action-badge badge-sell">বেচো 💰</span>
+          <span class="cell-note blue">(মঙ্গলের টা)</span>
+          <span class="action-badge badge-buy" style="margin-top:2px">কিনো ✅</span>
+          <span class="cell-note green">পরের সোমে বেচবে</span>
+        </div>
+      </div>
+
+      <!-- ROW: Category Z -->
+      <div class="chart-row">
+        <div class="row-label">
+          <span class="cat" style="color:var(--yellow)">Z</span>
+          <span class="settle">T+3 দিনে বেচা যাবে</span>
+        </div>
+        <!-- Sun: BUY -->
+        <div class="cell buy-cell">
+          <span class="action-badge badge-buy">কিনো ✅</span>
+          <span class="cell-note green">বুধে বেচবে</span>
+        </div>
+        <!-- Mon: BUY -->
+        <div class="cell buy-cell">
+          <span class="action-badge badge-buy">কিনো ✅</span>
+          <span class="cell-note green">বৃহস্পতিতে বেচবে</span>
+        </div>
+        <!-- Tue: NO -->
+        <div class="cell no-cell">
+          <span class="action-badge badge-no">কিনো না ⛔</span>
+          <span class="cell-note red">শুক্র-শনি বাদে T+3 = পরের সোম</span>
+          <span class="cell-note red">টাকা আটকে যাবে!</span>
+        </div>
+        <!-- Wed: SELL only -->
+        <div class="cell sell-cell">
+          <span class="action-badge badge-sell">বেচো 💰</span>
+          <span class="cell-note blue">(রবির Z টা)</span>
+          <span class="action-badge badge-no" style="margin-top:4px">কিনো না ⛔</span>
+          <span class="cell-note red">পরের মঙ্গলে আটকাবে</span>
+        </div>
+        <!-- Thu: SELL only -->
+        <div class="cell sell-cell">
+          <span class="action-badge badge-sell">বেচো 💰</span>
+          <span class="cell-note blue">(সোমের Z টা)</span>
+          <span class="action-badge badge-no" style="margin-top:4px">কিনো না ⛔</span>
+          <span class="cell-note red">পরের বুধে আটকাবে</span>
+        </div>
+      </div>
+
+      <!-- ROW: HOLD IF LOSS -->
+      <div class="chart-row">
+        <div class="row-label">
+          <span class="cat" style="color:var(--yellow);font-size:11px;">লস হলে</span>
+          <span class="settle">ধরে রাখো</span>
+        </div>
+        <div class="cell hold-cell">
+          <span class="action-badge badge-hold">ধরো ⏳</span>
+          <span class="cell-note yellow">পরে বেচো</span>
+        </div>
+        <div class="cell hold-cell">
+          <span class="action-badge badge-hold">ধরো ⏳</span>
+          <span class="cell-note yellow">পরে বেচো</span>
+        </div>
+        <div class="cell hold-cell">
+          <span class="action-badge badge-hold">ধরো ⏳</span>
+          <span class="cell-note yellow">পরে বেচো</span>
+        </div>
+        <div class="cell hold-cell">
+          <span class="action-badge badge-hold">ধরো ⏳</span>
+          <span class="cell-note yellow">পরে বেচো</span>
+        </div>
+        <div class="cell hold-cell">
+          <span class="action-badge badge-hold">ধরো ⏳</span>
+          <span class="cell-note yellow">পরে বেচো</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MONEY FLOW DAY BY DAY -->
+  <div class="sec-title">৬০,০০০ টাকা প্রতিদিন কীভাবে ঘুরবে</div>
+  <div class="money-flow">
+
+    <div class="flow-row">
+      <div class="flow-day">রবি</div>
+      <div class="flow-actions">
+        <div><span class="flow-tag ft-buy">কিনো</span><strong>A/B</strong> — ৳১০,০০০ &nbsp;|&nbsp; <strong>Z</strong> — ৳৮,০০০</div>
+        <div class="flow-money">হাতে থাকবে: ৳৩২,০০০ (+ ৳১০,০০০ buffer)</div>
+      </div>
+    </div>
+
+    <div class="flow-row">
+      <div class="flow-day">সোম</div>
+      <div class="flow-actions">
+        <div><span class="flow-tag ft-buy">কিনো</span><strong>A/B</strong> — ৳১০,০০০ &nbsp;|&nbsp; <strong>Z</strong> — ৳৮,০০০</div>
+        <div class="flow-money">হাতে থাকবে: ৳১৪,০০০ (+ buffer)</div>
+      </div>
+    </div>
+
+    <div class="flow-row">
+      <div class="flow-day">মঙ্গল</div>
+      <div class="flow-actions">
+        <div><span class="flow-tag ft-sell">বেচো</span>রবির <strong>A/B</strong> → ৳১০,০০০+ ফেরত</div>
+        <div><span class="flow-tag ft-buy">কিনো</span>নতুন <strong>A/B</strong> — ৳১০,০০০</div>
+        <div><span class="flow-tag ft-no">কিনো না</span>Z এই দিন নিষেধ ⛔</div>
+      </div>
+    </div>
+
+    <div class="flow-row">
+      <div class="flow-day">বুধ</div>
+      <div class="flow-actions">
+        <div><span class="flow-tag ft-sell">বেচো</span>সোমের <strong>A/B</strong> + রবির <strong>Z</strong> → ৳১৮,০০০+ ফেরত</div>
+        <div><span class="flow-tag ft-buy">কিনো</span>নতুন <strong>A/B</strong> — ৳১০,০০০</div>
+        <div><span class="flow-tag ft-no">কিনো না</span>Z এই দিন নিষেধ ⛔</div>
+      </div>
+    </div>
+
+    <div class="flow-row">
+      <div class="flow-day">বৃহস্পতি</div>
+      <div class="flow-actions">
+        <div><span class="flow-tag ft-sell">বেচো</span>মঙ্গলের <strong>A/B</strong> + সোমের <strong>Z</strong> → ৳১৮,০০০+ ফেরত</div>
+        <div><span class="flow-tag ft-buy">কিনো</span>নতুন <strong>A/B</strong> — ৳১০,০০০</div>
+        <div><span class="flow-tag ft-no">কিনো না</span>Z এই দিন নিষেধ ⛔</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- LOSS SCENARIOS -->
+  <div class="sec-title">লস বেশি হলে কী করবো — ৩টা Scenario</div>
+
+  <!-- Scenario 1: Small loss, sell -->
+  <div class="scenario loss">
+    <div class="scenario-head">😤 Scenario 1 — ছোট লস (৳১০০–২০০) → বেচে দাও</div>
+    <div class="scenario-body">
+      <div class="step">
+        <div class="step-num red">১</div>
+        <div class="step-text">রবিবার SQUARE (A) কিনলে <strong>৳১০,০০০</strong> দিয়ে</div>
+      </div>
+      <div class="step">
+        <div class="step-num red">২</div>
+        <div class="step-text">মঙ্গলবার দাম হলো <strong>৳৯,৮৫০</strong> — লস ৳১৫০</div>
+      </div>
+      <div class="step">
+        <div class="step-num green">৩</div>
+        <div class="step-text"><strong>বেচে দাও!</strong> এই ৳৯,৮৫০ দিয়ে নতুন share কিনো। আটকে থেকো না।</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scenario 2: Big loss, HOLD -->
+  <div class="scenario hold">
+    <div class="scenario-head">😰 Scenario 2 — বড় লস (৳৫০০+) → ধরে রাখো</div>
+    <div class="scenario-body">
+      <div class="step">
+        <div class="step-num yellow">১</div>
+        <div class="step-text">সোমবার BEXIMCO (Z) কিনলে <strong>৳৮,০০০</strong> দিয়ে</div>
+      </div>
+      <div class="step">
+        <div class="step-num yellow">২</div>
+        <div class="step-text">বৃহস্পতিবার দাম <strong>৳৭,৩০০</strong> — লস ৳৭০০। এখন বেচলে বড় ক্ষতি।</div>
+      </div>
+      <div class="step">
+        <div class="step-num yellow">৩</div>
+        <div class="step-text"><strong>ধরে রাখো।</strong> Buffer থেকে অন্য share কিনো — এটা settle হওয়ার অপেক্ষা করো।</div>
+      </div>
+      <div class="step">
+        <div class="step-num green">৪</div>
+        <div class="step-text">পরের সপ্তাহ দাম উঠলে <strong>বেচো।</strong> লস কমলেই বেচে দাও — সম্পূর্ণ recover-এর অপেক্ষা করো না।</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scenario 3: Profit, sell fast -->
+  <div class="scenario profit">
+    <div class="scenario-head">🎉 Scenario 3 — লাভ দেখলে → দ্রুত বেচো</div>
+    <div class="scenario-body">
+      <div class="step">
+        <div class="step-num green">১</div>
+        <div class="step-text">রবিবার GP (A) কিনলে <strong>৳১০,০০০</strong> দিয়ে</div>
+      </div>
+      <div class="step">
+        <div class="step-num green">২</div>
+        <div class="step-text">মঙ্গলবার দাম <strong>৳১০,৬০০</strong> — লাভ ৳৬০০ 🎉</div>
+      </div>
+      <div class="step">
+        <div class="step-num green">৩</div>
+        <div class="step-text"><strong>সাথে সাথে বেচো!</strong> "আরো বাড়বে" ভেবে বসে থেকো না — লাভ নিশ্চিত করো।</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RULES -->
+  <div class="sec-title">৩টা সহজ নিয়ম — সবসময় মনে রাখবে</div>
+
+  <div class="rule-box green">
+    <div class="rule-title green">✅ লাভের নিয়ম</div>
+    <div class="rule-body">লাভ <strong style="color:var(--green)">৳৩০০–৫০০</strong> হলে → বেচো &nbsp;|&nbsp; লাভ <strong style="color:var(--green)">৳৫০০–১০০০+</strong> হলে → অবশ্যই বেচো। "আরো বাড়বে" ফাঁদে পড়ো না।</div>
+  </div>
+
+  <div class="rule-box red">
+    <div class="rule-title red">❌ লসের নিয়ম</div>
+    <div class="rule-body">লস <strong style="color:var(--red)">৳১০০–২০০</strong> → বেচে দাও, নতুন trade করো।<br>লস <strong style="color:var(--red)">৳৫০০+</strong> → ধরে রাখো, recover হলে বেচো।<br>কখনো panic করে বড় লসে বেচো না।</div>
+  </div>
+
+  <div class="rule-box yellow">
+    <div class="rule-title yellow">⛔ Z Category নিয়ম</div>
+    <div class="rule-body">শুধু <strong style="color:var(--yellow)">রবিবার ও সোমবার</strong> Z কিনবে।<br>মঙ্গল, বুধ, বৃহস্পতিবার Z কিনলে টাকা পরের সপ্তাহে আটকে যাবে — সেদিন আর কিনতে পারবে না।</div>
+  </div>
+
+  <!-- DISCLAIMER -->
+  <div class="disc">
+    ⚠️ এটা শুধু শিক্ষামূলক পরিকল্পনা। DSE মার্কেট প্রতিদিন বদলায়। invest করার আগে broker app-এ দাম চেক করো এবং নিজের বিবেচনায় সিদ্ধান্ত নাও।
+  </div>
+
+  <div style="height:16px"></div>
+</div>
+</body>
+</html>

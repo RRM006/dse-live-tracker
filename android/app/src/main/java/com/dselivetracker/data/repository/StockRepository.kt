@@ -37,6 +37,7 @@ class StockRepository(private val cacheDao: StockCacheDao) {
                     closep = entity.closep, ycp = entity.ycp,
                     change = entity.change, pctChange = entity.pctChange,
                     upperLimit = entity.upperLimit, lowerLimit = entity.lowerLimit,
+                    breakerPct = entity.breakerPct, tickSize = entity.tickSize, openAdjPrice = entity.openAdjPrice,
                     category = entity.category
                 )
             }
@@ -97,12 +98,19 @@ class StockRepository(private val cacheDao: StockCacheDao) {
                 }
 
                 val cbMap = if (cbulHtml != null) QuotesParser.parseCbulHtml(cbulHtml) else emptyMap()
-                for ((symbol, limits) in cbMap) {
+                for ((symbol, cbul) in cbMap) {
                     val existing = merged[symbol]
                     if (existing != null) {
-                        merged[symbol] = existing.copy(upperLimit = limits.first, lowerLimit = limits.second)
+                        merged[symbol] = existing.copy(
+                            upperLimit = cbul.upperLimit, lowerLimit = cbul.lowerLimit,
+                            breakerPct = cbul.breakerPct, tickSize = cbul.tickSize, openAdjPrice = cbul.openAdjPrice
+                        )
                     } else {
-                        merged[symbol] = StockQuoteFull(symbol = symbol, ltp = 0.0, high = 0.0, low = 0.0, closep = 0.0, ycp = 0.0, change = 0.0, pctChange = 0.0, upperLimit = limits.first, lowerLimit = limits.second)
+                        merged[symbol] = StockQuoteFull(
+                            symbol = symbol, ltp = 0.0, high = 0.0, low = 0.0, closep = 0.0, ycp = 0.0, change = 0.0, pctChange = 0.0,
+                            upperLimit = cbul.upperLimit, lowerLimit = cbul.lowerLimit,
+                            breakerPct = cbul.breakerPct, tickSize = cbul.tickSize, openAdjPrice = cbul.openAdjPrice
+                        )
                     }
                 }
 
@@ -130,7 +138,9 @@ class StockRepository(private val cacheDao: StockCacheDao) {
                         StockCacheEntity(
                             symbol = symbol, ltp = q.ltp, high = q.high, low = q.low,
                             closep = q.closep, ycp = q.ycp, change = q.change, pctChange = q.pctChange,
-                            upperLimit = q.upperLimit, lowerLimit = q.lowerLimit, category = q.category,
+                            upperLimit = q.upperLimit, lowerLimit = q.lowerLimit,
+                            breakerPct = q.breakerPct, tickSize = q.tickSize, openAdjPrice = q.openAdjPrice,
+                            category = q.category,
                             lastUpdated = System.currentTimeMillis()
                         )
                     }

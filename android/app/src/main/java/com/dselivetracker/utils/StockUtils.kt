@@ -67,4 +67,13 @@ object StockUtils {
     }
 
     fun getAllMappings(): Map<String, String> = symbolToName
+
+    fun getBreakerPctForPrice(price: Double): Double = when {
+        price <= 200 -> 10.0
+        price <= 500 -> 8.75
+        price <= 1000 -> 7.5
+        price <= 2000 -> 6.25
+        price <= 5000 -> 5.0
+        else -> 3.75
+    }
 }

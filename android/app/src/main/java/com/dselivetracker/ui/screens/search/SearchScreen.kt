@@ -48,6 +48,7 @@ import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.dselivetracker.ui.components.formatBdt
 import com.dselivetracker.ui.theme.DarkHeader
+import com.dselivetracker.utils.StockUtils
 import com.dselivetracker.ui.theme.LossRed
 import com.dselivetracker.ui.theme.ProfitGreen
 import androidx.compose.foundation.text.KeyboardOptions
@@ -266,6 +267,30 @@ fun SearchScreen(
                                     CbulRow("Open Adj.", "\u09F3${formatBdt(r.openAdjPrice)}")
                                     CbulRow("Lower Limit", "\u09F3${formatBdt(r.lowerLimit)}")
                                     CbulRow("Upper Limit", "\u09F3${formatBdt(r.upperLimit)}")
+                                }
+                            }
+
+                            if (r.calcUpperLimit > 0) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(1.dp)
+                                        .background(MaterialTheme.colorScheme.outline)
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Next Day (from LTP)",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Column {
+                                    val calcBreaker = "%.2f".format(StockUtils.getBreakerPctForPrice(r.ltp))
+                                    CbulRow("Breaker", "${calcBreaker}%")
+                                    CbulRow("Next Upper", "\u09F3${formatBdt(r.calcUpperLimit)}")
+                                    CbulRow("Next Lower", "\u09F3${formatBdt(r.calcLowerLimit)}")
                                 }
                             }
                         }

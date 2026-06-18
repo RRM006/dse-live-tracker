@@ -23,7 +23,9 @@ data class SearchResult(
     val tickSize: Double = 0.0,
     val openAdjPrice: Double = 0.0,
     val category: String = "",
-    val timestamp: String? = null
+    val timestamp: String? = null,
+    val calcUpperLimit: Double = 0.0,
+    val calcLowerLimit: Double = 0.0
 )
 
 class SearchViewModel(application: Application) : AndroidViewModel(application) {
@@ -107,6 +109,10 @@ class SearchViewModel(application: Application) : AndroidViewModel(application) 
                     return@launch
                 }
 
+                val calcBreakerPct = StockUtils.getBreakerPctForPrice(info.ltp)
+                val calcUpper = info.ltp * (1.0 + calcBreakerPct / 100.0)
+                val calcLower = info.ltp * (1.0 - calcBreakerPct / 100.0)
+
                 _result.value = SearchResult(
                     symbol = sym,
                     ltp = info.ltp,
@@ -120,7 +126,9 @@ class SearchViewModel(application: Application) : AndroidViewModel(application) 
                     breakerPct = info.breakerPct,
                     tickSize = info.tickSize,
                     openAdjPrice = info.openAdjPrice,
-                    category = info.category
+                    category = info.category,
+                    calcUpperLimit = calcUpper,
+                    calcLowerLimit = calcLower
                 )
             } catch (e: Exception) {
                 _error.value = "Network error. Check your connection."

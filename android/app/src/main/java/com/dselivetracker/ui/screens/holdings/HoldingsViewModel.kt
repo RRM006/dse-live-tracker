@@ -58,6 +58,10 @@ class HoldingsViewModel(application: Application) : AndroidViewModel(application
 
     private var undoJob: Job? = null
 
+    val totalSharesBySymbol: StateFlow<Map<String, Int>> = portfolioRepo.getAllStocks().map { list ->
+        list.groupBy { it.symbol }.mapValues { (_, stocks) -> stocks.sumOf { it.quantity } }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+
     private val _ycpMap = MutableStateFlow<Map<String, Double>>(emptyMap())
     val ycpMap: StateFlow<Map<String, Double>> = _ycpMap
 

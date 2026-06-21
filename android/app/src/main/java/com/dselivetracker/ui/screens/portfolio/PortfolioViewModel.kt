@@ -142,11 +142,6 @@ class PortfolioViewModel(application: Application) : AndroidViewModel(applicatio
             return
         }
         viewModelScope.launch {
-            val existing = portfolioRepo.getBySymbol(sym)
-            if (existing != null) {
-                _error.value = "$sym already in portfolio"
-                return@launch
-            }
             portfolioRepo.addStock(sym, bp, qty, _buyDate.value)
             val cached = stockRepo.getBySymbol(sym)
             if (cached != null) {

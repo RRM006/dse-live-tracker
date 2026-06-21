@@ -101,6 +101,14 @@
   };
 
   function getStockName(s) { return STOCK_NAMES[s] || ''; }
+  function getBreakerPctForPrice(price) {
+    if (price <= 200) return 10.0;
+    if (price <= 500) return 8.75;
+    if (price <= 1000) return 7.5;
+    if (price <= 2000) return 6.25;
+    if (price <= 5000) return 5.0;
+    return 3.75;
+  }
 
   const $ = (id) => document.getElementById(id);
 
@@ -138,6 +146,10 @@
     dom.resultLowerLimit = $('resultLowerLimit');
     dom.resultUpperLimit = $('resultUpperLimit');
     dom.resultCbulSection = $('resultCbulSection');
+    dom.resultNextSection = $('resultNextSection');
+    dom.resultNextBreaker = $('resultNextBreaker');
+    dom.resultNextUpper = $('resultNextUpper');
+    dom.resultNextLower = $('resultNextLower');
     dom.loadingContainer = $('loadingContainer');
     dom.errorMsg = $('errorMsg');
     dom.statusText = $('statusText');
@@ -195,6 +207,7 @@
   let sortMode = 'pnl-asc';
   let undoTimeout = null;
   let pendingRemove = null;
+  let pendingRemoveIndex = -1;
   let stockData = {};
   let cbulData = {};
   let categoryData = {};
@@ -205,6 +218,7 @@
   let dseDataDate = null;
   let marketStatusFromDSE = null;
   let sellingSymbol = null;
+  let sellingIndex = -1;
 
   document.addEventListener('DOMContentLoaded', () => {
     cacheDOM();
@@ -398,8 +412,6 @@
     if (!symbol) return;
     if (isNaN(buyPrice) || buyPrice <= 0) return;
 
-    if (watchlist.find(w => w.symbol === symbol)) return;
-
     watchlist.push({ symbol, buyPrice, qty, buyDate });
     saveWatchlist();
     dom.addSymbol.value = '';
@@ -413,8 +425,8 @@
     dom.addSymbol.focus();
   }
 
-  function removeFromWatchlist(symbol) {
-    watchlist = watchlist.filter(w => w.symbol !== symbol);
+  function removeFromWatchlist(idx) {
+    watchlist.splice(idx, 1);
     saveWatchlist();
     renderSummary();
     renderHoldings();
@@ -427,25 +439,27 @@
     onCheckPrice();
   }
 
-  function promptRemove(symbol) {
+  function promptRemove(item) {
     if (undoTimeout) return;
-    const item = watchlist.find(w => w.symbol === symbol);
-    if (!item) return;
+    const idx = watchlist.indexOf(item);
+    if (idx === -1) return;
 
     pendingRemove = { ...item, _ltp: item._ltp, _prevLtp: item._prevLtp, _direction: item._direction, _timestamp: item._timestamp };
+    pendingRemoveIndex = idx;
 
-    watchlist = watchlist.filter(w => w.symbol !== symbol);
+    watchlist.splice(idx, 1);
     saveWatchlist();
     renderSummary();
     renderHoldings();
     updateBadges();
 
-    dom.snackbarText.textContent = symbol + ' removed';
+    dom.snackbarText.textContent = item.symbol + ' removed';
     dom.snackbarUndo.textContent = 'Undo';
     dom.snackbar.classList.remove('hidden');
 
     undoTimeout = setTimeout(() => {
       pendingRemove = null;
+      pendingRemoveIndex = -1;
       undoTimeout = null;
       dom.snackbar.classList.add('hidden');
     }, UNDO_MS);
@@ -456,8 +470,10 @@
     clearTimeout(undoTimeout);
     undoTimeout = null;
 
-    watchlist.push(pendingRemove);
+    const insertAt = Math.min(pendingRemoveIndex, watchlist.length);
+    watchlist.splice(insertAt, 0, pendingRemove);
     pendingRemove = null;
+    pendingRemoveIndex = -1;
     saveWatchlist();
     renderSummary();
     renderHoldings();
@@ -541,11 +557,12 @@
     return 'A';
   }
 
-  function openSellDialog(symbol) {
-    sellingSymbol = symbol;
-    const item = watchlist.find(w => w.symbol === symbol);
-    if (!item) return;
-    dom.sellSymbol.textContent = symbol;
+  function openSellDialog(item) {
+    const idx = watchlist.indexOf(item);
+    if (idx === -1) return;
+    sellingSymbol = item.symbol;
+    sellingIndex = idx;
+    dom.sellSymbol.textContent = item.symbol;
     dom.sellPrice.value = item._ltp || '';
     dom.sellDate.value = '';
     dom.sellMaturityWarning.classList.add('hidden');
@@ -558,10 +575,11 @@
   function closeSellDialog() {
     dom.sellDialogOverlay.classList.add('hidden');
     sellingSymbol = null;
+    sellingIndex = -1;
   }
 
   function updateSellPreview() {
-    const item = watchlist.find(w => w.symbol === sellingSymbol);
+    const item = sellingIndex >= 0 ? watchlist[sellingIndex] : null;
     if (!item) return;
     const sellPrice = parseFloat(dom.sellPrice.value);
     if (isNaN(sellPrice) || sellPrice <= 0) {
@@ -597,7 +615,7 @@
   }
 
   function updateSellMaturity() {
-    const item = watchlist.find(w => w.symbol === sellingSymbol);
+    const item = sellingIndex >= 0 ? watchlist[sellingIndex] : null;
     if (!item) return;
     const buyDate = item.buyDate;
     const cat = getCategory(sellingSymbol);
@@ -623,7 +641,7 @@
   }
 
   function confirmSell() {
-    const item = watchlist.find(w => w.symbol === sellingSymbol);
+    const item = sellingIndex >= 0 ? watchlist[sellingIndex] : null;
     if (!item) return;
     const sellPrice = parseFloat(dom.sellPrice.value);
     if (isNaN(sellPrice) || sellPrice <= 0) return;
@@ -651,7 +669,7 @@
     });
     saveTradeHistory();
 
-    watchlist = watchlist.filter(w => w.symbol !== sellingSymbol);
+    watchlist.splice(sellingIndex, 1);
     saveWatchlist();
     closeSellDialog();
     renderSummary();
@@ -1029,7 +1047,13 @@
     const sorted = getSortedWatchlist();
     dom.holdingsCount.textContent = sorted.length + ' stock' + (sorted.length !== 1 ? 's' : '');
 
+    const totalsBySymbol = {};
     sorted.forEach(item => {
+      if (!totalsBySymbol[item.symbol]) totalsBySymbol[item.symbol] = 0;
+      totalsBySymbol[item.symbol] += item.qty || 1;
+    });
+
+    sorted.forEach((item) => {
       const card = document.createElement('div');
       card.className = 'wl-card';
       card.dataset.symbol = item.symbol;
@@ -1102,6 +1126,11 @@
         }
       }
 
+      const totalQty = totalsBySymbol[item.symbol] || 0;
+      const totalSharesLine = totalQty > (item.qty || 1)
+        ? '<div class="wl-total-shares">Total: ' + totalQty + ' shares</div>'
+        : '';
+
       card.innerHTML = `
         <div class="wl-card-top">
           <div class="wl-symbol-row">
@@ -1112,7 +1141,7 @@
           <div class="wl-card-top-right">
             <span class="wl-pnl ${colorClass}">${pnlDisplay}</span>
             ${arrow}
-            <button class="wl-remove" data-symbol="${item.symbol}">&#x2715;</button>
+            <button class="wl-remove">&#x2715;</button>
           </div>
         </div>
         ${companyName ? '<div class="wl-company">' + companyName + '</div>' : ''}
@@ -1125,12 +1154,13 @@
           <span>&times; ${item.qty || 1}</span>
           <span>= ${formatBDT(item.buyPrice * (item.qty || 1))}</span>
         </div>
+        ${totalSharesLine}
         <div class="wl-card-bot-single">
           ${ycpLine}
           ${cbulHtml ? '<br>' + cbulHtml : ''}
         </div>
         <div class="wl-card-actions">
-          <button class="card-action-btn sell-btn" data-symbol="${item.symbol}">Sell</button>
+          <button class="card-action-btn sell-btn">Sell</button>
         </div>`;
 
       card.addEventListener('click', (e) => {
@@ -1141,13 +1171,13 @@
       const removeBtn = card.querySelector('.wl-remove');
       removeBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        promptRemove(item.symbol);
+        promptRemove(item);
       });
 
       const sellBtn = card.querySelector('.sell-btn');
       sellBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        openSellDialog(item.symbol);
+        openSellDialog(item);
       });
 
       dom.holdingsContainer.appendChild(card);
@@ -1458,7 +1488,10 @@
 
       const cat = getCategory(symbol);
       const cbul = getCbul(symbol);
-      renderResult({ symbol, ltp: info.ltp, ycp: info.ycp, high: info.high, low: info.low, closep: info.closep, pctChange: info.pctChange, category: cat, cbul });
+      const calcBreaker = getBreakerPctForPrice(info.ltp);
+      const calcUpper = info.ltp * (1 + calcBreaker / 100);
+      const calcLower = info.ltp * (1 - calcBreaker / 100);
+      renderResult({ symbol, ltp: info.ltp, ycp: info.ycp, high: info.high, low: info.low, closep: info.closep, pctChange: info.pctChange, category: cat, cbul, calcBreaker, calcUpper, calcLower });
       updateStatus(info.timestamp || 'just now');
       updateBadge();
 
@@ -1730,6 +1763,15 @@
       dom.resultCbulSection.classList.remove('hidden');
     } else if (dom.resultCbulSection) {
       dom.resultCbulSection.classList.add('hidden');
+    }
+
+    if (dom.resultNextSection && data.calcUpper) {
+      dom.resultNextBreaker.textContent = data.calcBreaker !== undefined ? data.calcBreaker + '%' : '--';
+      dom.resultNextUpper.textContent = data.calcUpper !== undefined ? '\u09F3' + formatBDT(data.calcUpper) : '--';
+      dom.resultNextLower.textContent = data.calcLower !== undefined ? '\u09F3' + formatBDT(data.calcLower) : '--';
+      dom.resultNextSection.classList.remove('hidden');
+    } else if (dom.resultNextSection) {
+      dom.resultNextSection.classList.add('hidden');
     }
 
     dom.resultCard.classList.remove('hidden');

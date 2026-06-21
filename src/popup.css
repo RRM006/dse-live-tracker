@@ -457,6 +457,13 @@ body.dark .btn-add-watchlist:hover { background: rgba(59,130,246,0.1); }
 .result-cbul-row span:first-child { color: var(--text-muted); }
 .result-cbul-row span:last-child { font-weight: 600; color: var(--text-primary); }
 
+.result-next-section { margin-top: 6px; }
+
+.wl-total-shares {
+  font-size: 11px; font-weight: 600; color: var(--text-secondary);
+  padding: 2px 0;
+}
+
 .profit-loss { font-size: 16px; font-weight: 700; }
 .profit-loss .currency { font-size: 13px; font-weight: 500; }
 

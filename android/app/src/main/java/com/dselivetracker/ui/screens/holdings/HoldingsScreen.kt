@@ -67,6 +67,7 @@ fun HoldingsScreen(
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val ycpMap by viewModel.ycpMap.collectAsState()
     val stockQuotes by viewModel.stockQuotes.collectAsState()
+    val totalSharesBySymbol by viewModel.totalSharesBySymbol.collectAsState()
     val sellStockId by viewModel.sellStockId.collectAsState()
     val sellPrice by viewModel.sellPrice.collectAsState()
     val sellDate by viewModel.sellDate.collectAsState()
@@ -359,7 +360,8 @@ fun HoldingsScreen(
                             lowerLimit = quote?.lowerLimit,
                             category = quote?.category,
                             buyDate = stock.buyDate,
-                            lastUpdated = stock.lastUpdated
+                            lastUpdated = stock.lastUpdated,
+                            totalQty = totalSharesBySymbol[stock.symbol]
                         )
                     }
                     item { Spacer(modifier = Modifier.height(8.dp)) }

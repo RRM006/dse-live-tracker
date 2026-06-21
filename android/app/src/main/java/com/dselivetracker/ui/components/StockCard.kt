@@ -56,7 +56,8 @@ fun StockCard(
     lowerLimit: Double? = null,
     category: String? = null,
     buyDate: Long? = null,
-    lastUpdated: Long? = null
+    lastUpdated: Long? = null,
+    totalQty: Int? = null
 ) {
     val pnl = if (lastLtp != null) (lastLtp - buyPrice) * quantity else null
     val pct = if (lastLtp != null && buyPrice > 0) ((lastLtp - buyPrice) / buyPrice) * 100 else null
@@ -282,6 +283,13 @@ fun StockCard(
                     )
                     Text(
                         text = " = \u09F3${formatBdt(buyPrice * quantity)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                if (totalQty != null && totalQty > quantity) {
+                    Text(
+                        text = "Total: $totalQty shares",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
